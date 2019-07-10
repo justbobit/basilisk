@@ -117,8 +117,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   With the the normal vector and the gradients of the tracers we can now compute
   the phase change velocity $\mathbf{v}_{pc}$, following the lines drawn in
   [meanflow.c](/sandbox/popinet/meanflow.c). We define it as the product between
-  the density ratio and the diffusive flow. Note that $\mathbf{v}_{pc}$ is weighted
-  by the face metric. */
+  the density ratio and the diffusive flow. Note that $\mathbf{v}_{pc}$ is 
+  weighted by the face metric. */
   
   foreach_face() {
 
@@ -139,7 +139,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
     else{
       if(fabs(dist[])<0.9*NB_width){
          v_pc.x[] = (1.4*gtr.x[]*fs.x[] + gtr2.x[]*(1.-fs.x[]))
-                  * 0.5*Delta/pow(dist[],2.); 
+                  * pow(0.5*Delta/dist[],2.); 
       }
     }
   }
@@ -148,36 +148,6 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   restriction((scalar *){v_pc});
 }
 
-void advection_LS (struct Advection p) //never takes into account the solid
-// boundary, the velocity field is defined on both phases.
-{
-
-  /**
-  If *src* is not provided we set all the source terms to zero. */
-  
-  scalar * lsrc = p.src;
-  if (!lsrc) {
-    const scalar zero[] = 0.;
-    for (scalar s in p.tracers)
-      lsrc = list_append (lsrc, zero);
-  }
-
-  assert (list_len(p.tracers) == list_len(lsrc));
-  scalar f, src;
-  for (f,src in p.tracers,lsrc) {
-    face vector flux[];
-    // tracer_fluxes (f, p.u, flux, p.dt, src);
-    tracer_fluxes_LS (f, p.u, flux, p.dt, src);
-    foreach()
-      foreach_dimension()
-        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); // careful we have removed
-        // cm[]
-  }
-  boundary (p.tracers);
-
-  if (!p.src)
-    free (lsrc);
-}
 
 void tracer_fluxes_LS (scalar f,
         face vector uf,
@@ -225,6 +195,38 @@ void tracer_fluxes_LS (scalar f,
   variable-resolution boundaries (on adaptive meshes). */
 
   boundary_flux ({flux});
+}
+
+
+void advection_LS (struct Advection p) //never takes into account the solid
+// boundary, the velocity field is defined on both phases.
+{
+
+  /**
+  If *src* is not provided we set all the source terms to zero. */
+  
+  scalar * lsrc = p.src;
+  if (!lsrc) {
+    const scalar zero[] = 0.;
+    for (scalar s in p.tracers)
+      lsrc = list_append (lsrc, zero);
+  }
+
+  assert (list_len(p.tracers) == list_len(lsrc));
+  scalar f, src;
+  for (f,src in p.tracers,lsrc) {
+    face vector flux[];
+    // tracer_fluxes (f, p.u, flux, p.dt, src);
+    tracer_fluxes_LS (f, p.u, flux, p.dt, src);
+    foreach()
+      foreach_dimension()
+        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); // careful we have removed
+        // cm[]
+  }
+  boundary (p.tracers);
+
+  if (!p.src)
+    free (lsrc);
 }
 
 
