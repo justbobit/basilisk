@@ -1,0 +1,210 @@
+pristine:059ad840d68be24ee947e51eee7df3ba5751a1247660592a060af2f6d51a1934
+Starting with inventory:
+0000014052-aed92a036e11a4793701cca85e63723492768df7a17c4106201926ef05ca16cf
+[TAG release 2019-05-24
+Stephane Popinet <popinet@basilisk.fr>**20190524094104
+ Ignore-this: 705835d080d91a92da1b5a5e4851c23
+] 
+hash: 0000009080-609c761cd7238fdaad249d49e2ce06adbcec09dae2a5aaf19285b58a03ab4df6
+[Fixed broken links
+Stephane Popinet <popinet@basilisk.fr>**20190522132458
+ Ignore-this: f4ad0d555bc54ec87212da5c2c2d2383
+] 
+hash: 0000001143-697045db0572be8adba0953e21a6aed4053d1f87d358a05c04b0e3951938e22f
+[Use only relative URLs
+Stephane Popinet <popinet@basilisk.fr>**20190523115223
+ Ignore-this: 24e7aaa6cf365b8b9b575dc954212ad0
+] 
+hash: 0000000751-a544311a5eb53fe31c088a3106bd9b687effcf2f7cbe7bfdafb4d76dd3457b04
+[Renamed all .[ch].page to .[ch]
+Stephane Popinet <popinet@basilisk.fr>**20190524092524
+ Ignore-this: b689cff67b55ab131d34cfbadfca7bf4
+] 
+hash: 0000011476-7ed2f12bfb3f45244088e74e25a72882bad3a84fa2b1d837e3aa70c1a89bd7db
+[Minor formatting
+Stephane Popinet <popinet@basilisk.fr>**20190524093247
+ Ignore-this: e14148f961dcb91c8449bcb03b36507f
+] 
+hash: 0000000786-cef8d09b79170321dcee94c50266749bb4f97eab898525765ecc895e9cc60133
+[Renamed turbulence.py to example.py to avoid Makefile conflict with turbulence.c
+Stephane Popinet <popinet@basilisk.fr>**20190524093759
+ Ignore-this: 36f9bf788d7aeb1184d9f4b14c54293f
+] 
+hash: 0000746927-1b15cbfac20fcbafb524647ba38ebc5a66d174979231acc545314dc51bd3b670
+[The .page extension is gone!
+Stephane Popinet <popinet@basilisk.fr>**20190524112438
+ Ignore-this: 25b7413269b908361bcd0655a7bdc396
+ 
+ Note that this involved major refactoring of Makefiles etc. so it is a
+ good idea to 'make clean' and re-install.
+] 
+hash: 0000017165-263cd7bbd4b631ba3317dd83fb41abe2893a5b8203bab02d477ecd19cd64598a
+[Minor doc fix
+Stephane Popinet <popinet@basilisk.fr>**20190524112528
+ Ignore-this: 217377c9f67e60da16a25c8f3253f007
+] 
+hash: 0000000386-9eb1243db98fa460d821e69da6f6b9b5e46794f0388fcf01acc0b645be44b25f
+[Partial fix for change history of (old) pages
+Stephane Popinet <popinet@basilisk.fr>**20190524135221
+ Ignore-this: d479a28b710b43d51313863811fe59c2
+] 
+hash: 0000000987-e1a75e6c371236828e36c6736c8709abd880b34bcee69b91856a62b4d29568dd
+[Added declaration anchors in source listings
+Stephane Popinet <popinet@basilisk.fr>**20190524143014
+ Ignore-this: c2a50d79346e95ee6e394b46c75800d8
+] 
+hash: 0000001546-88ff4e3dd5373e5c033407548b6b5e65f13ea5489cac710bcae0602447591c1a
+[Greek letters are not substituted anymore in source code
+Stephane Popinet <popinet@basilisk.fr>**20190524143316
+ Ignore-this: c9568e00f9ec4c3c40cb00c0a520e65d
+ 
+ This was confusing.
+] 
+hash: 0000001377-c639db93b6a54e8a6851e2ac11663d18f4ade497cc7f78807a919d501dca4bd5
+[Fixed line numbers showing up in comments
+Stephane Popinet <popinet@basilisk.fr>**20190524145100
+ Ignore-this: a75525ae5bbc664d97b7d9891a488995
+] 
+hash: 0000001989-2f0fbc783e19fb10ee8fe4167671773620008c1f1e873837500de71890aa0e92
+[More robust codeblock for really crappy sources (missing closing brackets etc.)
+Stephane Popinet <popinet@basilisk.fr>**20190524151622
+ Ignore-this: 6fa0856a6511574c098dbc26e8c71268
+] 
+hash: 0000000689-a8395cb67959d9df91347a5ae2c80fd2bd987cf6a24e382d62ab7d022b084995
+[Fixed javascript match pattern for .[cm] files
+Stephane Popinet <popinet@basilisk.fr>**20190524154346
+ Ignore-this: caef30a9c702242eea0f96cfb27b6dce
+] 
+hash: 0000000458-e1bca620f6e16cc38f0148e00f98e6c9d42eabb4c42f35bad6f8b1be3606a459
+[Fixed change history
+Stephane Popinet <popinet@basilisk.fr>**20190524170529
+ Ignore-this: fc8ff6c140c4a8d415916b891c3d664f
+] 
+hash: 0000000392-cbab9b71abd0b8c83209e1e42b79767777086efa45d49b312910ddb85ff811cd
+[Fixed creation of new page in darcsit
+Stephane Popinet <popinet@basilisk.fr>**20190525090445
+ Ignore-this: 4b154b57d47a7e72a28a068113878308
+] 
+hash: 0000002464-d7c172e12bdf30cfe1bd783c86e2b77a1d8bf86fe855027be41c51e17b2140d8
+[Documented code does not need to start with a documentation comment (i.e. /** )
+Stephane Popinet <popinet@basilisk.fr>**20190525125809
+ Ignore-this: 5c87ce8941b3e5896880c7014d2765c2
+ 
+ The documentation comment block can appear instead anywhere in the file.
+] 
+hash: 0000004530-4fa8452d4faddbb196eb8ad962e61892337bd83fb9a487f341c1bc06181fa716
+[Added "noindex" headers for web-crawling robots
+Stephane Popinet <popinet@basilisk.fr>**20190525132913
+ Ignore-this: 2b8cf496dd4d8adcbd31c67f2b5e5965
+] 
+hash: 0000000808-6dc5303b9653d4519f36150899a2c6c7ef4e8e1a6b52cb2fc79c347ecf28c439
+[Commented out password reset option
+Stephane Popinet <popinet@basilisk.fr>**20190525140741
+ Ignore-this: 596d7c3afbfb20f2e9b3df97e72aa1be
+] 
+hash: 0000000657-3f907cb17cb2ead256d20a4b7e124f91575a1be5d1cba4bab4d27edab64778fc
+[Error checking for itags
+Stephane Popinet <popinet@basilisk.fr>**20190525134828
+ Ignore-this: f32fe2dec924d9f95c25b853320bba3d
+] 
+hash: 0000000583-65c0fa71cbf19db9b7ab6f838bc06f544a8fb52d73446af8946059f18eb81782
+[Turned off cookie domain
+Stephane Popinet <popinet@basilisk.fr>**20190527075416
+ Ignore-this: 89f1aebf2fdb327dbc028a591edee86a
+] 
+hash: 0000000271-b9c0d1c919f0ba14cb49a1b4fab6a45d7e9e97e7cb3a22afb31ef6de3eff2b6a
+[Updated docs
+Stephane Popinet <popinet@basilisk.fr>**20190527080021
+ Ignore-this: fa8d61f38956bf0b8f9276417d42c47e
+] 
+hash: 0000000959-c64d55b39b1ad82b912c1204369b07482662ae799afc7dde922e718ae59c3bab
+[Better handling of warnings in darcsit
+Stephane Popinet <popinet@basilisk.fr>**20190527082038
+ Ignore-this: b4bbc2be6b68ed04632bd9b1c0d7d854
+] 
+hash: 0000002294-485c701729c3443298df53e979752a74d3dec8fafa3bcef8c971b927fc8df108
+[More filtering for web-indexing robots
+Stephane Popinet <popinet@basilisk.fr>**20190527091030
+ Ignore-this: 33606a3c3172866e07c32c8e9b9b2ed0
+] 
+hash: 0000001972-5c75428d26bcd57affed0badaebc7cc58b8888b84e3cdcca58a5f08bddb0c8e5
+[Fixed indexing robot filtering
+Stephane Popinet <popinet@basilisk.fr>**20190527093822
+ Ignore-this: e3a6ad15cad7c41a1dc240b38357fe57
+] 
+hash: 0000001751-dff9b5e26bf484c0ecdb837490332d0a6f3b7e535dfe8ec75393e9669a2f5cea
+[Better edit layout
+Stephane Popinet <popinet@basilisk.fr>**20190527103907
+ Ignore-this: b75b740d26fa9791da88ab1e6af35fa8
+] 
+hash: 0000005179-691cd343b9fab98cb432e60a81f98e35f40c64aca4cdea7e486394afeb26844e
+[Editor jumps to error/warning line
+Stephane Popinet <popinet@basilisk.fr>**20190527120501
+ Ignore-this: bdbd02acc987051a0d0fda83d98e1e10
+] 
+hash: 0000001643-186e4d68911176a12ff4a8825ebd6f6db0b4d6761f83dc88207f58bf8918efa5
+[Searching and error parsing specific to website
+Stephane Popinet <popinet@basilisk.fr>**20190527122418
+ Ignore-this: 202f3602d901b6b27e75afeb1d877d70
+] 
+hash: 0000000575-c19de58d314a0a46799a5f1014af29acf09f3e00e1d793653bfa8df5149002ae
+[Line number anchors in function prototypes were not correctly parsed
+Stephane Popinet <popinet@basilisk.fr>**20190527143558
+ Ignore-this: de43cc3925ed3934add427d96ce05d1d
+] 
+hash: 0000000674-0c7bc66227b2f00d8071d4303110efeac5695aef25d498c2db084db47bbe1bad
+[Fixed user Makefile filter
+Stephane Popinet <popinet@basilisk.fr>**20190527155542
+ Ignore-this: ffdedb87a706ad9fd55a2d2af61357fb
+] 
+hash: 0000000852-a73ed527fc3822219a0aace2c000329f4b1a7d7234f385a4ee9626c8bf9b710f
+[The default makefile for %.3D.s targets was wrong and complex
+Stephane Popinet <popinet@basilisk.fr>**20190605165940
+ Ignore-this: 3332ddf0a7a069f616373d60739ea84b
+] 
+hash: 0000001367-02be34d0580b2f34ee45ad6e2efe09c81f7dcc04387e9665be9d908f566302a1
+[Replaced laplacian.plot with laplacian/plots
+Stephane Popinet <popinet@basilisk.fr>**20190608143535
+ Ignore-this: f1e0a06e28123cf34951afede5379b30
+] 
+hash: 0000006810-72a94235f337d7653c4cdd505af6b6434e98f4f14b7d83bd4133f4673c32cd46
+[Poisson solver takes embedded fluxes into account by default
+Stephane Popinet <popinet@basilisk.fr>**20190608153656
+ Ignore-this: ea333e585bae4188a3820c529d4bb68e
+] 
+hash: 0000000568-e9745351f0c05881b5b5451e46a43776441c9671c3add8e0c063046533ac6bfe
+[Updated floating-point header for OSX
+Stephane Popinet <popinet@basilisk.fr>**20190614095544
+ Ignore-this: e124e1270b0adde844ae5cd225d2bc46
+] 
+hash: 0000000633-ec91b37744b0a720ff6c946963ad968da5066024264e0b9b96bc60ac84cb59ec
+[Improved installation instructions
+Stephane Popinet <popinet@basilisk.fr>**20190626085504
+ Ignore-this: 78577256a4b8cbac99dc2a49fb42b0ff
+] 
+hash: 0000000597-93e37907abf828545349267d177674f620b96e1eebb9e7b1861af29581b8a8d4
+[More portable Makefile
+Stephane Popinet <popinet@basilisk.fr>**20190626091350
+ Ignore-this: f9ded77b45a0ac4770672c824b3a31ff
+] 
+hash: 0000001817-67237658cea0b6082317ad8e545ee3acfb394e449d869f4dc2fffd59ccf8e667
+[Fixed octave .s generation
+Stephane Popinet <popinet@basilisk.fr>**20190626091923
+ Ignore-this: 28770b7b57dd51ce272e8409216e516c
+] 
+hash: 0000000191-da9820382c776486b8be8aaf7339487d3315138e5836d2085de4699bf97a79e2
+[More clever octave dependencies
+Stephane Popinet <popinet@basilisk.fr>**20190629084329
+ Ignore-this: d872752ee6248693d08b686b4fdec832
+] 
+hash: 0000000775-d336c2eb8b83cf0c20bee195679730e28cd9f963040888ab061b55e9823b908e
+[Octave paths are relative to DOCUMENT_ROOT
+Stephane Popinet <popinet@basilisk.fr>**20190629093108
+ Ignore-this: 13dcb73278db441f21951e6bf19cfc92
+] 
+hash: 0000000611-05758f6503ce520beb72dcd7342eb7dcc115095bab006ec7ac64073b1eb56bc2
+[record and apply darcs posthooks to deal with file addition/deletion
+Stephane Popinet <popinet@basilisk.fr>**20190701150332
+ Ignore-this: 5aa50206f2259f93d75b6c174eeef4d5
+] 
+hash: 0000001229-098b957a2f2a1b210692f2e416f86e08031fae2ef6ce36d2d06a4f091486dcbc
