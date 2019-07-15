@@ -317,25 +317,27 @@ event tracer_advection(i++,last){
     fractions (dist, cs, fs);
     boundary({cs,fs});
     restriction({cs,fs});
+    int sum=0 ;
+    foreach(reduction(+:sum)) {
 
-    int sum = 0;
     
-    if(cs0[] == 0.){
-      cs0[] -= cs[];
-      if(fabs(cs0[])> SEPS){ 
-        TL[] = T_eq; // 0-order approx. better to use gradients if possible
-                     // will be fixed
-        sum++;
+      if(cs0[] == 0.){
+        cs0[] -= cs[];
+        if(fabs(cs0[])> SEPS){ 
+          TL[] = T_eq; // 0-order approx. better to use gradients if possible
+                       // will be fixed
+          sum++;
+        }
       }
-    }
-    else if(cs0[] == 1.){
-      cs0[] -= cs[];
-      if(fabs(cs0[])> SEPS){ 
-        TS[] = T_eq;
-        sum++;
+      else if(cs0[] == 1.){
+        cs0[] -= cs[];
+        if(fabs(cs0[])> SEPS){ 
+          TS[] = T_eq;
+          sum++;
+        }
+        else if(cs[] == 0)  TL[] = T_eq;  
+        else if(cs[] == 1.) TS[] = T_eq;
       }
-      else if(cs[] == 0)  TL[] = T_eq;  
-      else if(cs[] == 1.) TS[] = T_eq;
     }
     boundary({TL,TS});
     restriction({TL,TS});
