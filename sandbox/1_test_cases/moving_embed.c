@@ -53,6 +53,7 @@ scalar * level_set = {dist};
 face vector v_pc[];
 face vector muv[];
 mgstats mgT;
+scalar grad1[], grad2[] ;
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
@@ -125,22 +126,21 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
     v_pc.x[] = 0.;
   }
 
+  foreach_face(y){
+    grad1[] = gtr.y[];
+    grad2[] = gtr2.y[];
+  }
+
 
 
   foreach_face(){
-    if (fabs(dist[])<=0.5*Delta){
+    if (fabs(dist[])<=0.9*NB_width){
 
       coord n = facet_normal (point, cs, fs);
       normalize(&n);
 
-      v_pc.x[] = (1.4*gtr.x[]*n.x*fs.x[] 
-                  + gtr2.x[]*n.x*(1.-fs.x[]))*0.1;
-    }
-    else{
-      if(fabs(dist[])<0.9*NB_width){
-         v_pc.x[] = (1.4*gtr.x[]*fs.x[] + gtr2.x[]*(1.-fs.x[]))
-                  * pow(0.5*Delta/dist[],2.); 
-      }
+      v_pc.x[] = (1.15*gtr.x[]*n.x
+                  - gtr2.x[]*n.x)*0.005;
     }
   }
 
@@ -258,7 +258,7 @@ event properties (i++)
 
 event init (t = 0)
 {
-  DT = 5.e-4;
+  DT = L0 / (1 << MAXLEVEL);
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -272,8 +272,8 @@ event init (t = 0)
   restriction({cs,fs});
   
   foreach() {
-    TL[] = TL_inf;
-    TS[] = TS_inf;
+    TL[] = T_eq;
+    TS[] = T_eq;
   }
 
   boundary({TL,TS});
@@ -289,32 +289,36 @@ event stability(i++){
 
 event tracer_advection(i++,last){
   if(i%2 == 0){
-  double L_H       = latent_heat;
-  if(t>0.5){  
+    double L_H       = latent_heat;
+    if(t>0.1){  
   phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, NB_width);
-  }
-  else{
-    foreach_face()
-      v_pc.x[] = 0.;
-  }
+    }
+    else{
+      foreach_face()
+        v_pc.x[] = 0.;
 
-  advection_LS (level_set, v_pc, dt);
-  boundary ({dist});
-  restriction({dist});
+      foreach(){
+        grad1[] = 0.;
+        grad2[] = 0.;
+      }
+    }
 
-  scalar cs0[];
-  foreach()
-    cs0[] = cs[];
-  boundary({cs0});
-  restriction({cs0});
+    advection_LS (level_set, v_pc, dt);
+    boundary ({dist});
+    restriction({dist});
+
+    scalar cs0[];
+    foreach()
+      cs0[] = cs[];
+    boundary({cs0});
+    restriction({cs0});
 
 
-  fractions (dist, cs, fs);
-  boundary({cs,fs});
-  restriction({cs,fs});
+    fractions (dist, cs, fs);
+    boundary({cs,fs});
+    restriction({cs,fs});
 
-  int sum = 0;
-  foreach(reduction(+:sum)) {
+    int sum = 0;
     
     if(cs0[] == 0.){
       cs0[] -= cs[];
@@ -330,19 +334,17 @@ event tracer_advection(i++,last){
         TS[] = T_eq;
         sum++;
       }
+      else if(cs[] == 0)  TL[] = T_eq;  
+      else if(cs[] == 1.) TS[] = T_eq;
     }
-    else if(cs[] == 0)  TL[] = T_eq;  
-    else if(cs[] == 1.) TS[] = T_eq;
-  }
-  
-  boundary({TL,TS});
-  restriction({TL,TS});
-  if(sum>0){
-    stats s = statsf (v_pc.y);
-    fprintf (stderr, "##%d %.12f %.9f %g\n",sum, s.sum, s.min, s.max);
-  }
+    boundary({TL,TS});
+    restriction({TL,TS});
+    if(sum>0){
+      stats s = statsf (v_pc.y);
+      fprintf (stderr, "##%d %.12f %.9f %g\n",sum, s.sum, s.min, s.max);
+    }
 
-  event ("properties");
+    event ("properties");
   }
 }
 
@@ -364,7 +366,7 @@ event tracer_diffusion(i++){
 event LS_reinitialization(i+=2,last){
   if(i>0){
     LS_reinit2(dist,L0/(1 << MAXLEVEL), 0.9*NB_width,
-      20.*nb_cell_NB);
+      3.*nb_cell_NB);
   }
 }
 
@@ -372,12 +374,12 @@ event LS_reinitialization(i+=2,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( i +=24,last)
+event movies ( t +=0.2,last)
 {
   boundary({TL,TS});
   scalar visu[];
   foreach(){
-    visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
+    visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
     // visu[] = TL[] ;
   }
   boundary({visu});
@@ -386,9 +388,21 @@ event movies ( i +=24,last)
   draw_vof("cs");
   squares("visu", min =-1, max = 1);
   save ("visu.mp4");
+  view (fov = 1.65685, quat = {0,0,0,1}, tx = 0, ty = 0, 
+    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  draw_vof("cs");
+  squares("grad1", min =-1, max = 1);
+  save ("grad1.mp4");
+  view (fov = 1.65685, quat = {0,0,0,1}, tx = 0, ty = 0, 
+    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  draw_vof("cs");
+  squares("grad2", min =-1, max = 1);
+  save ("grad2.mp4");
+  
   clear();
-  view (fov = 16.642, quat = {0,0,0,1}, tx = -0.0665815, 
-    ty = -0.00665815, bg = {1,1,1}, width = 600, height = 600, samples = 1);
+
+  
+
   draw_vof("cs");
   squares("v_pc.y");
   save ("v_pc.mp4");
@@ -405,7 +419,7 @@ event movies ( i +=24,last)
 We check the number of iterations of the Poisson and viscous
 problems. */
 
-event logfile (i++;t<0.8){
+event logfile (i++;t<30.){
   stats s;
   if(i%2==0){
     s = statsf (TS);
@@ -417,5 +431,9 @@ event logfile (i++;t<0.8){
   }
   stats s2 = statsf(v_pc.y);
   fprintf (stderr, "##  v_pc.y  %.12f %.12f\n", s2.min, s2.max);
+}
+
+event sauv(i+=200,last){
+  dump();
 }
 
