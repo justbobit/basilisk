@@ -76,7 +76,6 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
 // 2) we determine xCFL according to the local size
     int sum = 0;
     foreach(reduction(min:xCFL) reduction(+:sum)){
-      if(fabs(dist_eps[])<NB){
         sum ++;
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
@@ -99,11 +98,9 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   // stability condition near the interface is modified
           xCFL = min(xCFL,fabs(Dij)/(Delta));
         }
-      }
     }
     foreach(reduction(max:res)){
       double delt =0.;
-      if(fabs(dist_eps[])<NB){
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
 
@@ -143,7 +140,6 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
         }
         dist[] -= xCFL*dt*delt;
         if(fabs(delt)>=res) res = fabs(delt);
-      }
     }
     
     boundary({dist});
