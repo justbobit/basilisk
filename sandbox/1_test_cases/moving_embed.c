@@ -121,9 +121,11 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   the density ratio and the diffusive flow. Note that $\mathbf{v}_{pc}$ is 
   weighted by the face metric. */
   
+  face vector v_pc2[];
   foreach_face() {
 
-    v_pc.x[] = 0.;
+    v_pc.x[]  = 0.;
+    v_pc2.x[] = 0.;
   }
 
   foreach_face(y){
@@ -131,17 +133,72 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
     grad2[] = gtr2.y[];
   }
 
+  coord n = {0, 1.}; // here the normal must be properly defined.
+  foreach_face(){
+    if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
+              && fabs(dist[])<=0.9*NB_width){
+
+      v_pc.x[] = (4.*gtr.x[]*n.x
+                  - gtr2.x[]*n.x)*0.01;
+      v_pc2.x[] = v_pc.x[];
+    }
+  }
+  boundary((scalar *){v_pc});
+
+  foreach(){
+    if(fabs(dist[])<0.9*NB_width){
+
+      coord grad_dist;
+      if(dist[]>0.){
+      foreach_dimension(){
+        double a = max(0.,dist[]    - dist[-1,0]);
+        double b = min(0.,dist[1,0] - dist[]    );
+        grad_dist.x = max(a,b);
+        }
+      }
+      else{
+        foreach_dimension(){
+          double a = min(0.,dist[]    - dist[-1,0]);
+          double b = max(0.,dist[1,0] - dist[]    );
+         grad_dist.x = max(a,b);
+        }
+      }
+      int k1, k2;
+      int sig[2] = {1 , 1 };
+      if(dist[]>0.){
+        if(grad_dist.x>0) sig[0] = -1;
+        if(grad_dist.y>0) sig[1] = -1;
+      }
+      else{
+        if(grad_dist.x<0) sig[0] = -1;
+        if(grad_dist.y<0) sig[1] = -1;
+      }
+      
+      double ratio = fabs(grad_dist.x)/(max(SEPS,fabs(grad_dist.y))) ;
+      if(ratio > sqrt(3.)){
+        k1 = 1;
+        k2 = 0;
+      }
+      else{
+        if(ratio > 1./sqrt(3.)){
+          k1 = 1;
+          k2 = 1;   
+      }
+      else{
+          k1 = 0;
+          k2 = 1; 
+      }
+      }
+      v_pc2.x[] = v_pc.x[sig[0]*k1,sig[1]*k2];
+      v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2];
+    }
+  }
+  boundary((scalar *){v_pc2});
+  restriction((scalar *){v_pc2});    
 
 
   foreach_face(){
-    if (fabs(dist[])<=0.9*NB_width){
-
-      coord n = facet_normal (point, cs, fs);
-      normalize(&n);
-
-      v_pc.x[] = (1.15*gtr.x[]*n.x
-                  - gtr2.x[]*n.x)*0.005;
-    }
+    if(v_pc.x[]==0. && v_pc2.x[] !=0.) v_pc.x[] = v_pc2.x[];
   }
 
   boundary((scalar *){v_pc});
@@ -291,7 +348,7 @@ event tracer_advection(i++,last){
   if(i%2 == 0){
     double L_H       = latent_heat;
     if(t>0.1){  
-  phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, NB_width);
+  phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width);
     }
     else{
       foreach_face()
@@ -317,34 +374,6 @@ event tracer_advection(i++,last){
     fractions (dist, cs, fs);
     boundary({cs,fs});
     restriction({cs,fs});
-    int sum=0 ;
-    foreach(reduction(+:sum)) {
-
-    
-      if(cs0[] == 0.){
-        cs0[] -= cs[];
-        if(fabs(cs0[])> SEPS){ 
-          TL[] = T_eq; // 0-order approx. better to use gradients if possible
-                       // will be fixed
-          sum++;
-        }
-      }
-      else if(cs0[] == 1.){
-        cs0[] -= cs[];
-        if(fabs(cs0[])> SEPS){ 
-          TS[] = T_eq;
-          sum++;
-        }
-        else if(cs[] == 0)  TL[] = T_eq;  
-        else if(cs[] == 1.) TS[] = T_eq;
-      }
-    }
-    boundary({TL,TS});
-    restriction({TL,TS});
-    if(sum>0){
-      stats s = statsf (v_pc.y);
-      fprintf (stderr, "##%d %.12f %.9f %g\n",sum, s.sum, s.min, s.max);
-    }
 
     event ("properties");
   }
@@ -367,7 +396,7 @@ event tracer_diffusion(i++){
 
 event LS_reinitialization(i+=2,last){
   if(i>0){
-    LS_reinit2(dist,L0/(1 << MAXLEVEL), 0.9*NB_width,
+    LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
       3.*nb_cell_NB);
   }
 }
@@ -390,38 +419,38 @@ event movies ( t +=0.2,last)
   draw_vof("cs");
   squares("visu", min =-1, max = 1);
   save ("visu.mp4");
-  view (fov = 1.65685, quat = {0,0,0,1}, tx = 0, ty = 0, 
+  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
     bg = {1,1,1}, width = 600, height = 600, samples = 1);
   draw_vof("cs");
   squares("grad1", min =-1, max = 1);
   save ("grad1.mp4");
-  view (fov = 1.65685, quat = {0,0,0,1}, tx = 0, ty = 0, 
+  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
     bg = {1,1,1}, width = 600, height = 600, samples = 1);
   draw_vof("cs");
   squares("grad2", min =-1, max = 1);
   save ("grad2.mp4");
-  
-  clear();
 
-  
-
+  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
+    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  boundary({dist});
   draw_vof("cs");
-  squares("v_pc.y");
-  save ("v_pc.mp4");
+  squares("dist", min =-NB_width, max = NB_width);
+  save ("dist.mp4");
+  
+
   clear();
-  view (fov = 16.642, quat = {0,0,0,1}, tx = -0.0665815, 
-    ty = -0.00665815, bg = {1,1,1}, width = 600, height = 600, samples = 1);
+
   draw_vof("cs");
   cells();
-  squares("TS", min = -1 , max = 1);
-  save ("TS.mp4");
+  squares("v_pc.y", min =-0.02, max=0.02);
+  save ("v_pc.mp4");
 }
 
 /**
 We check the number of iterations of the Poisson and viscous
 problems. */
 
-event logfile (i++;t<30.){
+event logfile (i++;t<40.){
   stats s;
   if(i%2==0){
     s = statsf (TS);
@@ -438,4 +467,3 @@ event logfile (i++;t<30.){
 event sauv(i+=200,last){
   dump();
 }
-
