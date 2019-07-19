@@ -39,7 +39,7 @@ both fields.
 #define TS_inf       -1.
 
 
-#define H0 0.001*L0
+#define H0 -0.25*L0+0.9*L0/(1 << MAXLEVEL)
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -53,7 +53,6 @@ scalar * level_set = {dist};
 face vector v_pc[];
 face vector muv[];
 mgstats mgT;
-scalar grad1[], grad2[] ;
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
@@ -78,15 +77,25 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   
   here we use the embed_gradient_face_x defined in embed that gives a proper
   definition of the gradients with embedded boundaries. */
-  
+  double test = H0;
+  fprintf(stderr, "%g\n", test);
   face vector gtr[], gtr2[];
-  foreach_face(){
-    if(fabs(dist[])<NB_width)
-      gtr.x[] = face_gradient_x(tr,0);
+  foreach(){
+    if(fabs(dist[])<NB_width){
+      if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
+              && fabs(dist[])<=0.9*NB_width){
+        coord n       = facet_normal( point, cs ,fs) , p;
+        double alpha  = plane_alpha (cs[], n);
+        double length = line_length_center (n, alpha, &p);
+        fprintf(stderr, "%g %g\n", x+p.x, y+p.y);
+        double c=0.;
+        gtr.x[] = dirichlet_gradient(point, tr, cs , n, p, 0., &c);
+      }
+    }
     else
       gtr.x[] = 0.;
   }
-
+  exit(1);
 
   boundary((scalar*){gtr});
   foreach(){
@@ -128,81 +137,82 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
     v_pc2.x[] = 0.;
   }
 
-  foreach_face(y){
-    grad1[] = gtr.y[];
-    grad2[] = gtr2.y[];
-  }
 
-  coord n = {0, 1.}; // here the normal must be properly defined.
   foreach_face(){
     if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
               && fabs(dist[])<=0.9*NB_width){
-
+      coord n = facet_normal(point, cs , fs);
+      normalize(&n);
       v_pc.x[] = (4.*gtr.x[]*n.x
                   - gtr2.x[]*n.x)*0.01;
       v_pc2.x[] = v_pc.x[];
     }
   }
+
   boundary((scalar *){v_pc});
+  int ii;
+  for (ii=1; ii<=nb_cell_NB; ii++){
+    foreach(){
+      if(fabs(dist[])<0.9*NB_width){
 
-  foreach(){
-    if(fabs(dist[])<0.9*NB_width){
-
-      coord grad_dist;
-      if(dist[]>0.){
-      foreach_dimension(){
-        double a = max(0.,dist[]    - dist[-1,0]);
-        double b = min(0.,dist[1,0] - dist[]    );
-        grad_dist.x = max(a,b);
-        }
-      }
-      else{
+        coord grad_dist;
+        if(dist[]>0.){
         foreach_dimension(){
-          double a = min(0.,dist[]    - dist[-1,0]);
-          double b = max(0.,dist[1,0] - dist[]    );
-         grad_dist.x = max(a,b);
+          double a = max(0.,dist[]    - dist[-1,0]);
+          double b = min(0.,dist[1,0] - dist[]    );
+          grad_dist.x = max(a,b);
+          }
         }
-      }
-      int k1, k2;
-      int sig[2] = {1 , 1 };
-      if(dist[]>0.){
-        if(grad_dist.x>0) sig[0] = -1;
-        if(grad_dist.y>0) sig[1] = -1;
-      }
-      else{
-        if(grad_dist.x<0) sig[0] = -1;
-        if(grad_dist.y<0) sig[1] = -1;
-      }
-      
-      double ratio = fabs(grad_dist.x)/(max(SEPS,fabs(grad_dist.y))) ;
-      if(ratio > sqrt(3.)){
-        k1 = 1;
-        k2 = 0;
-      }
-      else{
-        if(ratio > 1./sqrt(3.)){
+        else{
+          foreach_dimension(){
+            double a = min(0.,dist[]    - dist[-1,0]);
+            double b = max(0.,dist[1,0] - dist[]    );
+           grad_dist.x = max(a,b);
+          }
+        }
+        int k1, k2;
+        int sig[2] = {1 , 1 };
+        if(dist[]>0.){
+          if(grad_dist.x>0) sig[0] = -1;
+          if(grad_dist.y>0) sig[1] = -1;
+        }
+        else{
+          if(grad_dist.x<0) sig[0] = -1;
+          if(grad_dist.y<0) sig[1] = -1;
+        }
+        
+        double ratio = fabs(grad_dist.x)/(max(SEPS,fabs(grad_dist.y))) ;
+        if(ratio > sqrt(3.)){
           k1 = 1;
-          k2 = 1;   
+          k2 = 0;
+        }
+        else{
+          if(ratio > 1./sqrt(3.)){
+            k1 = 1;
+            k2 = 1;   
+        }
+        else{
+            k1 = 0;
+            k2 = 1; 
+        }
+        }
+        v_pc2.x[] = (v_pc.x[sig[0]*k1,sig[1]*k2])*
+                    exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/(2*Delta)));
+        v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]*
+                    exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/(2*Delta)));
       }
-      else{
-          k1 = 0;
-          k2 = 1; 
-      }
-      }
-      v_pc2.x[] = v_pc.x[sig[0]*k1,sig[1]*k2];
-      v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2];
     }
+    boundary((scalar *){v_pc2});
+    restriction((scalar *){v_pc2});    
+
+
+    foreach_face(){
+      if(v_pc.x[]==0. && v_pc2.x[] !=0.) v_pc.x[] = v_pc2.x[];
+    }
+
+    boundary((scalar *){v_pc});
+    restriction((scalar *){v_pc});
   }
-  boundary((scalar *){v_pc2});
-  restriction((scalar *){v_pc2});    
-
-
-  foreach_face(){
-    if(v_pc.x[]==0. && v_pc2.x[] !=0.) v_pc.x[] = v_pc2.x[];
-  }
-
-  boundary((scalar *){v_pc});
-  restriction((scalar *){v_pc});
 }
 
 
@@ -315,7 +325,7 @@ event properties (i++)
 
 event init (t = 0)
 {
-  DT = L0 / (1 << MAXLEVEL);
+  DT = 0.8*L0 / (1 << MAXLEVEL);
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -353,11 +363,6 @@ event tracer_advection(i++,last){
     else{
       foreach_face()
         v_pc.x[] = 0.;
-
-      foreach(){
-        grad1[] = 0.;
-        grad2[] = 0.;
-      }
     }
 
     advection_LS (level_set, v_pc, dt);
@@ -397,7 +402,7 @@ event tracer_diffusion(i++){
 event LS_reinitialization(i+=2,last){
   if(i>0){
     LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
-      3.*nb_cell_NB);
+      1.4*nb_cell_NB);
   }
 }
 
@@ -411,7 +416,6 @@ event movies ( t +=0.2,last)
   scalar visu[];
   foreach(){
     visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
-    // visu[] = TL[] ;
   }
   boundary({visu});
   view (fov = 16.642, quat = {0,0,0,1}, tx = -0.0665815, 
@@ -419,49 +423,35 @@ event movies ( t +=0.2,last)
   draw_vof("cs");
   squares("visu", min =-1, max = 1);
   save ("visu.mp4");
-  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  draw_vof("cs");
-  squares("grad1", min =-1, max = 1);
-  save ("grad1.mp4");
-  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  draw_vof("cs");
-  squares("grad2", min =-1, max = 1);
-  save ("grad2.mp4");
+  // draw_vof("cs");
+  // squares("grad1", min =-1, max = 1);
+  // save ("grad1.mp4");
+  // view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
+  //   bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  // draw_vof("cs");
+  // squares("grad2", min =-1, max = 1);
+  // save ("grad2.mp4");
 
-  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  boundary({dist});
-  draw_vof("cs");
-  squares("dist", min =-NB_width, max = NB_width);
-  save ("dist.mp4");
+  // view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
+  //   bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  // boundary({dist});
+  // draw_vof("cs");
+  // squares("dist", min =-NB_width, max = NB_width);
+  // save ("dist.mp4");
   
 
-  clear();
-
-  draw_vof("cs");
-  cells();
-  squares("v_pc.y", min =-0.02, max=0.02);
-  save ("v_pc.mp4");
+  // clear();
+  // view (fov = 9.02646, quat = {0,0,0,1}, tx = 0.0759169, 
+  //   ty = 0.25667, bg = {1,1,1}, width = 762, height = 763, samples = 1);
+  // draw_vof("cs");
+  // cells();
+  // squares("v_pc.y", min =0.0, max=0.01);
+  // save ("v_pc.mp4");
 }
 
-/**
-We check the number of iterations of the Poisson and viscous
-problems. */
-
-event logfile (i++;t<40.){
-  stats s;
-  if(i%2==0){
-    s = statsf (TS);
-    fprintf (stderr, "# %g TS %.12f %.9f\n", t, s.min, s.max);
-  }
-  if(i%2==1){
-    s = statsf (TL);
-    fprintf (stderr, "# %g TL %.12f %.9f\n", t, s.min, s.max);
-  }
+event logfile (i++;t<300){
   stats s2 = statsf(v_pc.y);
-  fprintf (stderr, "##  v_pc.y  %.12f %.12f\n", s2.min, s2.max);
+  fprintf (stderr, "## %g  %.12f %.12f\n",t, s2.min, s2.max);
 }
 
 event sauv(i+=200,last){
