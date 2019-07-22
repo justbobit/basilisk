@@ -39,7 +39,7 @@ both fields.
 #define TS_inf       -1.
 
 
-#define H0 -0.25*L0+0.9*L0/(1 << MAXLEVEL)
+#define H0 2.9*L0/(1 << MAXLEVEL)
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -53,6 +53,8 @@ scalar * level_set = {dist};
 face vector v_pc[];
 face vector muv[];
 mgstats mgT;
+scalar grad1[], grad2[];
+
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
@@ -77,25 +79,24 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   
   here we use the embed_gradient_face_x defined in embed that gives a proper
   definition of the gradients with embedded boundaries. */
-  double test = H0;
-  fprintf(stderr, "%g\n", test);
-  face vector gtr[], gtr2[];
+  vector gtr[], gtr2[];
   foreach(){
+    gtr.x[] = 0.;
     if(fabs(dist[])<NB_width){
       if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
               && fabs(dist[])<=0.9*NB_width){
         coord n       = facet_normal( point, cs ,fs) , p;
+        normalize(&n);
         double alpha  = plane_alpha (cs[], n);
         double length = line_length_center (n, alpha, &p);
-        fprintf(stderr, "%g %g\n", x+p.x, y+p.y);
         double c=0.;
-        gtr.x[] = dirichlet_gradient(point, tr, cs , n, p, 0., &c);
+        foreach_dimension(){
+          gtr.x[] += dirichlet_gradient(point, tr, cs , n, p, 0., &c)*n.x;
+        }
       }
     }
-    else
-      gtr.x[] = 0.;
+    grad2[] = gtr.y[];
   }
-  exit(1);
 
   boundary((scalar*){gtr});
   foreach(){
@@ -107,14 +108,26 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   boundary({cs,fs});
   restriction({cs,fs});
   
-  foreach_face(){
-    if(fabs(dist[])<NB_width)
-      gtr2.x[] = face_gradient_x(tr2,0);
-    else
-      gtr2.x[] = 0.;
+  foreach(){
+    gtr2.x[] = 0.;
+    if(fabs(dist[])< 0.9*NB_width){
+      if(((fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.))){
+        coord n       = facet_normal( point, cs ,fs) , p;
+        normalize(&n);
+        double alpha  = plane_alpha (cs[], n);
+        double length = line_length_center (n, alpha, &p);
+        double c=0.;
+        foreach_dimension(){
+          gtr2.x[] += dirichlet_gradient(point, tr2, cs , n, p, 0., &c)*n.x;
+        }
+      }
+    }
+    grad1[] = gtr2.y[];
   }
   boundary((scalar*){gtr2});
   
+  boundary({grad1,grad2});
+
   foreach(){
       cs[]      = 1.-cs[];
   }
@@ -141,15 +154,40 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   foreach_face(){
     if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
               && fabs(dist[])<=0.9*NB_width){
-      coord n = facet_normal(point, cs , fs);
-      normalize(&n);
-      v_pc.x[] = (4.*gtr.x[]*n.x
-                  - gtr2.x[]*n.x)*0.01;
+      v_pc.x[] =  clamp((-gtr.x[] - gtr2.x[])*0.01,-0.01,0.01);
       v_pc2.x[] = v_pc.x[];
     }
   }
 
   boundary((scalar *){v_pc});
+  stats s2 = statsf(v_pc.y);
+  stats s3 = statsf(gtr.y);
+  stats s4 = statsf(gtr2.y);
+  if(s2.max > 0.6){
+    fprintf (stderr, "##ARRET1 %.6f %.6f %.6f\n",t, s2.min, s2.max);
+    fprintf (stderr, "##ARRET2 %.6f %.6f %.6f\n",t, s3.min, s3.max);
+    fprintf (stderr, "##ARRET3 %.6f %.6f %.6f\n",t, s4.min, s4.max);
+
+    view (fov = 10., quat = {0,0,0,1}, 
+    tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
+    draw_vof("cs");
+    cells();
+    squares("v_pc.y");
+    save ("v_pc.png");
+    clear();
+    draw_vof("cs");
+    cells();
+    squares("gtr.x");
+    save ("gtr_x.png");
+    clear();
+    draw_vof("cs");
+    cells();
+    squares("gtr2.x");
+    save ("gtr2_x.png");
+
+    exit(1);
+  }
+
   int ii;
   for (ii=1; ii<=nb_cell_NB; ii++){
     foreach(){
@@ -190,16 +228,16 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
           if(ratio > 1./sqrt(3.)){
             k1 = 1;
             k2 = 1;   
-        }
+          }
         else{
-            k1 = 0;
-            k2 = 1; 
-        }
+          k1 = 0;
+          k2 = 1; 
+          }
         }
         v_pc2.x[] = (v_pc.x[sig[0]*k1,sig[1]*k2])*
-                    exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/(2*Delta)));
+                    exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/(4*Delta)));
         v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]*
-                    exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/(2*Delta)));
+                    exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/(4*Delta)));
       }
     }
     boundary((scalar *){v_pc2});
@@ -325,7 +363,7 @@ event properties (i++)
 
 event init (t = 0)
 {
-  DT = 0.8*L0 / (1 << MAXLEVEL);
+  DT = 10.0*L0 / (1 << MAXLEVEL);
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -355,19 +393,15 @@ event stability(i++){
 
 
 event tracer_advection(i++,last){
-  if(i%2 == 0){
+  if(i%2 == 1){
     double L_H       = latent_heat;
     if(t>0.1){  
-  phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width);
+  phase_change_velocity_LS_embed (cs, fs ,TS, TL, v_pc, dist, L_H, 1.05*NB_width);
     }
     else{
       foreach_face()
         v_pc.x[] = 0.;
     }
-
-    advection_LS (level_set, v_pc, dt);
-    boundary ({dist});
-    restriction({dist});
 
     scalar cs0[];
     foreach()
@@ -375,6 +409,9 @@ event tracer_advection(i++,last){
     boundary({cs0});
     restriction({cs0});
 
+    advection_LS (level_set, v_pc, dt);
+    boundary ({dist});
+    restriction({dist});
 
     fractions (dist, cs, fs);
     boundary({cs,fs});
@@ -410,7 +447,7 @@ event LS_reinitialization(i+=2,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( t +=0.2,last)
+event movies ( t +=2,last)
 {
   boundary({TL,TS});
   scalar visu[];
@@ -418,19 +455,21 @@ event movies ( t +=0.2,last)
     visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
   }
   boundary({visu});
-  view (fov = 16.642, quat = {0,0,0,1}, tx = -0.0665815, 
-    ty = -0.00665815, bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  view (fov = 10., quat = {0,0,0,1}, 
+    tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  clear();
   draw_vof("cs");
+  cells();
   squares("visu", min =-1, max = 1);
   save ("visu.mp4");
   // draw_vof("cs");
-  // squares("grad1", min =-1, max = 1);
-  // save ("grad1.mp4");
-  // view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-  //   bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  // draw_vof("cs");
-  // squares("grad2", min =-1, max = 1);
-  // save ("grad2.mp4");
+  squares("grad1", min =-1, max = 1);
+  save ("grad1.mp4");
+  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
+    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  draw_vof("cs");
+  squares("grad2", min =-1, max = 1);
+  save ("grad2.mp4");
 
   // view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
   //   bg = {1,1,1}, width = 600, height = 600, samples = 1);
@@ -439,21 +478,21 @@ event movies ( t +=0.2,last)
   // squares("dist", min =-NB_width, max = NB_width);
   // save ("dist.mp4");
   
-
-  // clear();
+  boundary((scalar *){v_pc});
+  clear();
   // view (fov = 9.02646, quat = {0,0,0,1}, tx = 0.0759169, 
   //   ty = 0.25667, bg = {1,1,1}, width = 762, height = 763, samples = 1);
-  // draw_vof("cs");
-  // cells();
-  // squares("v_pc.y", min =0.0, max=0.01);
-  // save ("v_pc.mp4");
+  draw_vof("cs");
+  cells();
+  squares("v_pc.y", min =-5.e-3, max=5.e-3);
+  save ("v_pc.mp4");
 }
 
-event logfile (i++;t<300){
+event logfile (i+=10;t<1000){
   stats s2 = statsf(v_pc.y);
-  fprintf (stderr, "## %g  %.12f %.12f\n",t, s2.min, s2.max);
+  fprintf (stderr, "## %.6f %.6f %.6f\n",t, s2.min, s2.max);
 }
 
-event sauv(i+=200,last){
+event sauv(i+=2000,last){
   dump();
 }

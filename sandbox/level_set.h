@@ -149,8 +149,8 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   //   %6.2e %f %f\n",i, sum, res,eps, xCFL,dt, NB);
 
     if(res<eps){
-      fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e %6.2e %f %f\n",i, sum, res,
-        eps, xCFL,dt, NB);
+      // fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e %6.2e %f %f\n",i, sum, res,
+        // eps, xCFL,dt, NB);
       break;
     }
     // if(i==it_max)fprintf(stderr,"# REINIT NOT CONVERGED %d %6.2e %6.2e \n", sum,
