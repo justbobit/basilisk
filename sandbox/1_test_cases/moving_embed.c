@@ -447,12 +447,13 @@ event LS_reinitialization(i+=2,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( t +=2,last)
+event movies ( i+=80,last)
 {
   boundary({TL,TS});
   scalar visu[];
   foreach(){
-    visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
+    // visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
+    visu[] = TL[];
   }
   boundary({visu});
   view (fov = 10., quat = {0,0,0,1}, 
@@ -461,7 +462,7 @@ event movies ( t +=2,last)
   draw_vof("cs");
   cells();
   squares("visu", min =-1, max = 1);
-  save ("visu.mp4");
+  save ("visu.png");
   // draw_vof("cs");
   squares("grad1", min =-1, max = 1);
   save ("grad1.mp4");
@@ -488,7 +489,7 @@ event movies ( t +=2,last)
   save ("v_pc.mp4");
 }
 
-event logfile (i+=10;t<1000){
+event logfile (i+=10;t<100){
   stats s2 = statsf(v_pc.y);
   fprintf (stderr, "## %.6f %.6f %.6f\n",t, s2.min, s2.max);
 }
