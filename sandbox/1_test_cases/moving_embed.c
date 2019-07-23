@@ -39,7 +39,8 @@ both fields.
 #define TS_inf       -1.
 
 
-#define H0 2.9*L0/(1 << MAXLEVEL)
+
+#define H0 -2.99*L0/(1 << MAXLEVEL)
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -81,7 +82,9 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   definition of the gradients with embedded boundaries. */
   vector gtr[], gtr2[];
   foreach(){
-    gtr.x[] = 0.;
+    foreach_dimension(){
+      gtr.x[] = 0.;
+    }
     if(fabs(dist[])<NB_width){
       if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
               && fabs(dist[])<=0.9*NB_width){
@@ -109,7 +112,9 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   restriction({cs,fs});
   
   foreach(){
-    gtr2.x[] = 0.;
+    foreach_dimension(){
+      gtr2.x[] = 0.;
+    }
     if(fabs(dist[])< 0.9*NB_width){
       if(((fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.))){
         coord n       = facet_normal( point, cs ,fs) , p;
@@ -152,10 +157,10 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 
 
   foreach_face(){
-    if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
+    if ( (  fs.y[] !=0. && fs.y[] != 1.   ) 
               && fabs(dist[])<=0.9*NB_width){
-      v_pc.x[] =  clamp((-gtr.x[] - gtr2.x[])*0.01,-0.01,0.01);
-      v_pc2.x[] = v_pc.x[];
+      v_pc.x[]     =  (gtr2.x[] - gtr.x[])*0.01;
+      v_pc2.x[]    = v_pc.x[];
     }
   }
 
@@ -164,9 +169,9 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   stats s3 = statsf(gtr.y);
   stats s4 = statsf(gtr2.y);
   if(s2.max > 0.6){
-    fprintf (stderr, "##ARRET1 %.6f %.6f %.6f\n",t, s2.min, s2.max);
-    fprintf (stderr, "##ARRET2 %.6f %.6f %.6f\n",t, s3.min, s3.max);
-    fprintf (stderr, "##ARRET3 %.6f %.6f %.6f\n",t, s4.min, s4.max);
+    fprintf (stderr, "#ARRET1 %.6f %.6f %.6f\n",t, s2.min, s2.max);
+    fprintf (stderr, "#ARRET2 %.6f %.6f %.6f\n",t, s3.min, s3.max);
+    fprintf (stderr, "#ARRET3 %.6f %.6f %.6f\n",t, s4.min, s4.max);
 
     view (fov = 10., quat = {0,0,0,1}, 
     tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
@@ -363,7 +368,7 @@ event properties (i++)
 
 event init (t = 0)
 {
-  DT = 10.0*L0 / (1 << MAXLEVEL);
+  DT = L0 / (1 << MAXLEVEL);
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -393,15 +398,9 @@ event stability(i++){
 
 
 event tracer_advection(i++,last){
-  if(i%2 == 1){
-    double L_H       = latent_heat;
-    if(t>0.1){  
-  phase_change_velocity_LS_embed (cs, fs ,TS, TL, v_pc, dist, L_H, 1.05*NB_width);
-    }
-    else{
-      foreach_face()
-        v_pc.x[] = 0.;
-    }
+  if(i%2 == 0){
+    double L_H       = latent_heat;  
+    phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width);
 
     scalar cs0[];
     foreach()
@@ -436,8 +435,8 @@ event tracer_diffusion(i++){
 }
 
 
-event LS_reinitialization(i+=2,last){
-  if(i>0){
+event LS_reinitialization(i++,last){
+  if(i>0 && i%2==0){
     LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
       1.4*nb_cell_NB);
   }
@@ -447,27 +446,26 @@ event LS_reinitialization(i+=2,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( i+=80,last)
+event movies ( i+=4,last)
 {
   boundary({TL,TS});
   scalar visu[];
   foreach(){
-    // visu[] = cs[]*TL[]+(1.-cs[])*TS[] ;
-    visu[] = TL[];
+    visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
+    // visu[] = TL[];
   }
   boundary({visu});
-  view (fov = 10., quat = {0,0,0,1}, 
+  view (fov = 5., quat = {0,0,0,1}, 
     tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
   clear();
   draw_vof("cs");
   cells();
-  squares("visu", min =-1, max = 1);
-  save ("visu.png");
+  squares("visu", min =-0.02, max = 0.02);
+  save ("visu.mp4");
   // draw_vof("cs");
+  draw_vof("cs");
   squares("grad1", min =-1, max = 1);
   save ("grad1.mp4");
-  view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
   draw_vof("cs");
   squares("grad2", min =-1, max = 1);
   save ("grad2.mp4");
@@ -489,11 +487,11 @@ event movies ( i+=80,last)
   save ("v_pc.mp4");
 }
 
-event logfile (i+=10;t<100){
+event logfile (i+=10;t<40){
   stats s2 = statsf(v_pc.y);
   fprintf (stderr, "## %.6f %.6f %.6f\n",t, s2.min, s2.max);
 }
 
-event sauv(i+=2000,last){
+event sauv(i+=200,last){
   dump();
 }
