@@ -35,3 +35,9 @@ double sign2 (double x)
 {
   return(x > 0. ? 1. : x<0 ? -1. : 0.);
 }
+
+
+  static double capteur(Point point, scalar s){
+    return s[];
+  }
+
