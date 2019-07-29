@@ -26,7 +26,7 @@ refining cells. */
      #if LIMITED
         #include "Adapt_Limiters.h"
      #else 
-        #include "Adapt_No_Limiters.h"
+        #include "Adapt_no_Limiters.h"
      #endif  
      event defaults (i = 0) {
          for (scalar s in tracers) {
