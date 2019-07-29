@@ -4,6 +4,8 @@ include $(BASILISK)/Makefile.defs
 
 moving_embed.tst  : CFLAGS += -fopenmp
 
+mini_cell.tst  : CFLAGS += -fopenmp
+
 test_advection.tst: CFLAGS += -fopenmp
 
 update.tst        : CFLAGS += -fopenmp
