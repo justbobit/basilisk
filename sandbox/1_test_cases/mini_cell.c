@@ -63,7 +63,7 @@ int main() {
     restriction({TL});
     for (ij=1;ij<iteration;ij++){
 
-      diffusion(TL, dt, D = 1.);
+      diffusion(TL, dt, fs);
       t ++;
 
       boundary({TL});
