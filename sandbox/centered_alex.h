@@ -532,46 +532,22 @@ advection else theres is an inconsistency on the boundary definition. In theory,
 #if DOUBLE_EMBED  
 event double_calculation(i++,last)
 {
-
-  scalar p_temp[];
-  vector u_temp[], g_temp[];
-  scalar pf_temp[];
-  face vector uf_temp[];
-
 // modify the fs , cs, copy the outer fields in the partially covered cells
 
   foreach(){
-      cs[]      = 1.-cs[];
-      // saved everywhere due to the adapt() function
-      p_temp[]  = p[] ;
-      p[]       = p2[] ;
-      p2[]      = p_temp[] ;
-      
-      pf_temp[] = pf[];
-      pf[]      = pf2[];
-      pf2[]     = pf_temp[];
-
-
-      foreach_dimension(){
- 
-        u_temp.x[] = u.x[];
-        u.x[]      = u2.x[];
-        u2.x[]     = u_temp.x[];
-        g_temp.x[] = g.x[];
-        g.x[]      = g2.x[];
-        g2.x[]     = g_temp.x[];
-      }
+    cs[]      = 1.-cs[];
   }
-
   foreach_face(){
     fs.x[]      = 1.-fs.x[];
-    uf_temp.x[] = uf.x[];
-    uf.x[]      = uf2.x[];
-    uf2.x[]     = uf_temp.x[];
   }
+
   boundary({cs,fs});
   restriction({cs,fs});
 
+  swap(scalar, p,p2);
+  swap(scalar, pf,pf2);
+  swap(vector, u, u2);
+  swap(vector, g, g2);
   boundary ((scalar *){u});
   restriction ((scalar *){u});
   boundary ({pf,p,g});
@@ -589,8 +565,7 @@ event double_calculation(i++,last)
 #endif
 
 /**
-Trying stuff for the level set advection
-
+Level_set_functions
 */
 #if LevelSet
 event LS_advection(i++,last);
