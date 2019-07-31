@@ -447,7 +447,7 @@ event LS_reinitialization(i++,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( i+=40,last;t<10.)
+event movies ( i+=40,last;t<500.)
 {
   if(t>2.){
   boundary({TL,TS});
@@ -479,10 +479,6 @@ event movies ( i+=40,last;t<10.)
   }  
 }
 
-
-event print_toto(i++){
-  fprintf(stderr, "#%g\n", t);
-}
 /**
 ~~~gnuplot Temperature in one cell near the interface
 plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperature', \
