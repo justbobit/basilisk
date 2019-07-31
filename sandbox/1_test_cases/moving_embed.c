@@ -18,7 +18,7 @@ fields dependant of one another and then make the boundary movement dependant on
 both fields.
 
 
-![Animation of cs*u.x + (1-cs)*u2.x.](update/movie.mp4)(loop)
+![Animation of cs*u.x + (1-cs)*u2.x.](moving_embed/visu.mp4)(loop)
 */
 
 #define DOUBLE_EMBED  1
@@ -30,9 +30,10 @@ both fields.
 #include "diffusion.h"
 #include "tracer.h"
 #include "view.h"
+#include "alex_functions.h"
 
-#define MIN_LEVEL 7
-#define MAXLEVEL 7
+#define MIN_LEVEL 6
+#define MAXLEVEL 6
 #define latent_heat 10.
 #define T_eq         0.
 #define TL_inf       1.
@@ -40,7 +41,8 @@ both fields.
 
 
 
-#define H0 -2.99*L0/(1 << MAXLEVEL)
+#define H0 -L0/3.-1.001*L0/(1 << MAXLEVEL)
+#define dH_refine (2.*L0/(1 << 5))
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -91,10 +93,16 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         coord n       = facet_normal( point, cs ,fs) , p;
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
-        double length = line_length_center (n, alpha, &p);
+        line_length_center (n, alpha, &p);
         double c=0.;
+        double temp = 0.;
+        // foreach_dimension(){
+        //   temp += v_pc.x[]*v_pc.x[];
+        // }
+        // temp = -0.2*sqrt(temp);
+        double grad = dirichlet_gradient(point, tr, cs , n, p, temp, &c);
         foreach_dimension(){
-          gtr.x[] += dirichlet_gradient(point, tr, cs , n, p, 0., &c)*n.x;
+          gtr.x[] += grad*n.x;
         }
       }
     }
@@ -120,10 +128,16 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         coord n       = facet_normal( point, cs ,fs) , p;
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
-        double length = line_length_center (n, alpha, &p);
+        line_length_center (n, alpha, &p);
         double c=0.;
+        double temp = 0.;
+        // foreach_dimension(){
+        //   temp += v_pc.x[]*v_pc.x[];
+        // }
+        // temp = -0.2*sqrt(temp);
+        double grad = dirichlet_gradient(point, tr2, cs , n, p, temp, &c);
         foreach_dimension(){
-          gtr2.x[] += dirichlet_gradient(point, tr2, cs , n, p, 0., &c)*n.x;
+          gtr2.x[] += grad*n.x;
         }
       }
     }
@@ -159,39 +173,13 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   foreach_face(){
     if ( (  fs.y[] !=0. && fs.y[] != 1.   ) 
               && fabs(dist[])<=0.9*NB_width){
-      v_pc.x[]     =  (gtr2.x[] - gtr.x[])*0.01;
+      v_pc.x[]     =  (1.4*gtr2.x[] - gtr.x[])*0.02;
       v_pc2.x[]    = v_pc.x[];
     }
   }
 
   boundary((scalar *){v_pc});
-  stats s2 = statsf(v_pc.y);
-  stats s3 = statsf(gtr.y);
-  stats s4 = statsf(gtr2.y);
-  if(s2.max > 0.6){
-    fprintf (stderr, "#ARRET1 %.6f %.6f %.6f\n",t, s2.min, s2.max);
-    fprintf (stderr, "#ARRET2 %.6f %.6f %.6f\n",t, s3.min, s3.max);
-    fprintf (stderr, "#ARRET3 %.6f %.6f %.6f\n",t, s4.min, s4.max);
-
-    view (fov = 10., quat = {0,0,0,1}, 
-    tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
-    draw_vof("cs");
-    cells();
-    squares("v_pc.y");
-    save ("v_pc.png");
-    clear();
-    draw_vof("cs");
-    cells();
-    squares("gtr.x");
-    save ("gtr_x.png");
-    clear();
-    draw_vof("cs");
-    cells();
-    squares("gtr2.x");
-    save ("gtr2_x.png");
-
-    exit(1);
-  }
+  boundary((scalar *){v_pc2});
 
   int ii;
   for (ii=1; ii<=nb_cell_NB; ii++){
@@ -326,7 +314,6 @@ void advection_LS (struct Advection p) //never takes into account the solid
   scalar f, src;
   for (f,src in p.tracers,lsrc) {
     face vector flux[];
-    // tracer_fluxes (f, p.u, flux, p.dt, src);
     tracer_fluxes_LS (f, p.u, flux, p.dt, src);
     foreach()
       foreach_dimension()
@@ -349,10 +336,12 @@ int main() {
   CFL = 0.5;
   origin (-L0/2., -L0/2.);
   
-  N = 1 << MAXLEVEL;
+  N = 1 << MIN_LEVEL;
+  init_grid (N);
+
   NB_width = L0*nb_cell_NB / (1<< MAXLEVEL);
   mu = muv;
-  run(); 
+  run();
 }
 
 /**
@@ -368,7 +357,13 @@ event properties (i++)
 
 event init (t = 0)
 {
-  DT = L0 / (1 << MAXLEVEL);
+  // #if TREE
+  //   refine (level < MAXLEVEL && plane(x,  y, (H0 - dH_refine)) > 0.
+  //           && plane(x, y, (H0 + dH_refine)) < 0.);
+  // #endif
+
+
+  DT = CFL*L0 / (1 << MAXLEVEL);
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -422,15 +417,21 @@ event tracer_advection(i++,last){
 
 event tracer_diffusion(i++){
 
+  if(i%2==0){
+
   foreach_face()
-    muv.x[] = fm.x[]*0.125/160.;
+    muv.x[] = fs.x[];
   boundary((scalar *) {muv});
 
-  if(i%2==0){
-    mgT = diffusion(TL, dt, D = 1.);
+    mgT = diffusion(TL, dt, fs);
   }
   else{
-    mgT = diffusion(TS, dt, D = 1.);
+
+  foreach_face()
+    muv.x[] = fs.x[];
+  boundary((scalar *) {muv});
+
+    mgT = diffusion(TS, dt, muv);
   }
 }
 
@@ -446,52 +447,55 @@ event LS_reinitialization(i++,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( i+=4,last)
+event movies ( i+=40,last;t<10.)
 {
+  if(t>2.){
   boundary({TL,TS});
-  scalar visu[];
-  foreach(){
-    visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
-    // visu[] = TL[];
-  }
-  boundary({visu});
-  view (fov = 5., quat = {0,0,0,1}, 
-    tx = 0, ty = 0, bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  clear();
-  draw_vof("cs");
-  cells();
-  squares("visu", min =-0.02, max = 0.02);
-  save ("visu.mp4");
-  // draw_vof("cs");
-  draw_vof("cs");
-  squares("grad1", min =-1, max = 1);
-  save ("grad1.mp4");
-  draw_vof("cs");
-  squares("grad2", min =-1, max = 1);
-  save ("grad2.mp4");
+    scalar visu[];
+    foreach(){
+      visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
+    }
+    boundary({visu});
+    
+    draw_vof("cs");
+    squares("visu", min =-1., max = 1.);
+    save ("visu.mp4");
+    
+    boundary((scalar *){v_pc});
+    clear();
+    draw_vof("cs");
+    cells();
+    squares("v_pc.y", min =-3.e-3, max=3.e-3);
+    save ("v_pc.mp4");
+    stats s2    = statsf(v_pc.y);
+    Point p     = locate(-0.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
 
-  // view (fov = 5., quat = {0,0,0,1}, tx = 0, ty = 0, 
-  //   bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  // boundary({dist});
-  // draw_vof("cs");
-  // squares("dist", min =-NB_width, max = NB_width);
-  // save ("dist.mp4");
-  
-  boundary((scalar *){v_pc});
-  clear();
-  // view (fov = 9.02646, quat = {0,0,0,1}, tx = 0.0759169, 
-  //   ty = 0.25667, bg = {1,1,1}, width = 762, height = 763, samples = 1);
-  draw_vof("cs");
-  cells();
-  squares("v_pc.y", min =-5.e-3, max=5.e-3);
-  save ("v_pc.mp4");
+    double cap  = capteur(p, TL);
+    double cap3  = capteur(p, TS);
+    double cap2 = capteur(p, cs);
+    double T_point = (1.-cap2)*cap + (cap2)*cap3;
+    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+      t, cap, cap2, cap3, T_point, s2.min, s2.max);
+  }  
 }
 
-event logfile (i+=10;t<40){
-  stats s2 = statsf(v_pc.y);
-  fprintf (stderr, "## %.6f %.6f %.6f\n",t, s2.min, s2.max);
-}
 
-event sauv(i+=200,last){
-  dump();
+event print_toto(i++){
+  fprintf(stderr, "#%g\n", t);
 }
+/**
+~~~gnuplot Temperature in one cell near the interface
+plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperature', \
+    'log' u 1:5 w l t 'Approximated Temperature'
+~~~
+
+~~~gnuplot Phase change velocity
+f(x) = a + b*x
+fit f(x) 'log' u (log($1)):(log($7)) via a,b
+ftitle(a,b) = sprintf("%.3f/x^{%4.2f}", exp(a), -b)
+set xrange[2:1200]
+plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
+~~~
+
+*/
+ 
