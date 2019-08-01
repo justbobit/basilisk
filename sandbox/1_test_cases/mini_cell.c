@@ -1,6 +1,26 @@
 /**
 #Double diffusion of a scalar with a moving embed boundary.
 
+We simulate the diffusion of two tracers separated by an embedded boundary. The
+interface moves using the Stefan relation :
+
+$$
+  \mathbf{v}_{pc} = \frac{1}{L_H}(\lambda_1 \nabla T_L - \lambda_1 \nabla T_S)
+  $$
+where $L_H$ is the latent heat of water, $T_L$ and $T_S$ are the temperature
+fields on both sides of the interface.
+
+The full algorithm is done on two iterations. It is the following :
+
+  1. Calculate the gradients on both sides of the interface
+  1. Move the interface
+  1. Define the diffusion coefficient
+  1. Diffuse one tracer
+  1. Reinit the level_set function
+  1. Change the inside and the outside of the embed boundary
+  1. Define the diffusion coefficient
+  1. Diffuse the other tracer
+  1. Change the inside and the outside of the embed boundary
 
 */
 
