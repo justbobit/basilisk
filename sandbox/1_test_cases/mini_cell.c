@@ -1,25 +1,50 @@
 /**
-#Issue with gradient calculation and embedded boundaries
+#Double diffusion of a scalar with a moving embed boundary.
 
-Example displaying an issue for embedded boundaries close to a mesh face when
-the embedded is parallele to the interface.
 
 */
 
+#define DOUBLE_EMBED 1
+#define LevelSet     1
+
 #include "embed.h"
+#include "advection.h"
 #include "diffusion.h"
+#include "../level_set.h"
 #include "view.h"
 
+#define MIN_LEVEL 5
 #define MAXLEVEL 5
-#define T_eq     0.
-#define TL_inf  -1.
-#define T_eq     0.
+#define latent_heat 10.
+#define T_eq         0.
+#define TL_inf       1.
+#define TS_inf       -1.
 
+#define H0 -L0/3.-1.001*L0/(1 << MAXLEVEL)
+#define dH_refine (2.*L0/(1 << 5))
+#define DT_MAX  1.
+
+#define T_eq         0.
 #define plane(x, y, H) (y - H)
 
-scalar TL[] ;
+scalar TL[], TS[], dist[];
+scalar * tracers = {TL, TS};
+scalar * level_set = {dist};
+face vector v_pc[];
+face vector muv[];
+mgstats mgT;
+scalar grad1[], grad2[];
+
+
+int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
+double  NB_width ;              // length of the NB
+  
+
 TL[embed]  = dirichlet(T_eq);
-TL[bottom] = dirichlet(TL_inf); 
+TL[top]    = dirichlet(TL_inf); 
+
+TS[embed]  = dirichlet(T_eq);
+TS[bottom] = dirichlet(TS_inf); 
 
 /**
 The domain is 4 units long, centered vertically. */
@@ -28,85 +53,133 @@ int main() {
   L0 = 4.;
   CFL = 0.5;
   origin (-L0/2., -L0/2.);
-
-
-  double T[2];
-  T[0] = -(5.-0.00011)*L0/(1 << MAXLEVEL);
-  T[1] = -(5.-0.5)*L0/(1 << MAXLEVEL);
   
   N = 1 << MAXLEVEL;
   init_grid (N);
+  run();
+}
 
-  vertex scalar dist[];
-  int ii, iteration = 100;
-  int ij;
-  double T1[iteration][2], T2[iteration][2];
-  for (ii = 1; ii <= 2; ii++){
-    char name[80];
-    sprintf (name, "Temperature%d.mp4", ii);
-  
-    foreach_vertex(){
-      dist[] = -plane(x,y,T[ii-1]);
+event init(t=0){
+
+
+  DT = 1.;
+  NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
+
+  foreach_vertex(){
+      dist[] = plane(x,y,-(5.-0.5)*L0/(1 << MAXLEVEL));
     }
     boundary ({dist});
     restriction({dist});
     fractions (dist, cs, fs);
     boundary({cs,fs});
     restriction({cs,fs});
-
-    double dt = 1., t = 0;
-    foreach() {
-      TL[] = T_eq;
-    }
-
-    boundary({TL});
-    restriction({TL});
-    for (ij=1;ij<iteration;ij++){
-
-      diffusion(TL, dt, fs);
-      t ++;
-
-      boundary({TL});
-      restriction({TL});
-
-      draw_vof("cs");
-      cells();
-      squares("TL", min =-1., max=0.);
-      save (name);
-      stats s2 = statsf(TL);
-      if(ii==1){
-        T1[ij-1][0] = s2.min;
-        T1[ij-1][1] = s2.max;
-      }
-      else{
-        T2[ij-1][0] = s2.min;
-        T2[ij-1][1] = s2.max;
-      }
-    }
+  
+  foreach() {
+    TL[] = T_eq;
+    TS[] = T_eq;
   }
-  for (ij=1;ij<iteration;ij++){
-    fprintf(stderr, "%d %g %g %g %g\n", ij, 
-      T1[ij-1][0], T1[ij-1][1], T2[ij-1][0], T2[ij-1][1]);
+
+  boundary({TL,TS});
+  restriction({TL,TS});
+
+
+}
+
+event properties(i++){
+  double T[2];
+  T[0] = 1.;
+  T[1] = 1.4;
+
+  foreach_face()
+    muv.x[] = T[0]*fs.x[];
+  boundary((scalar *) {muv});
+
+}
+
+
+event tracer_advection(i++,last){
+  if(i%2 == 0){
+    double L_H       = latent_heat;  
+    phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
+      nb_cell_NB);
+
+    scalar cs0[];
+    foreach()
+      cs0[] = cs[];
+    boundary({cs0});
+    restriction({cs0});
+
+    advection_LS (level_set, v_pc, dt);
+    boundary ({dist});
+    restriction({dist});
+
+    fractions (dist, cs, fs);
+    boundary({cs,fs});
+    restriction({cs,fs});
+
   }
 }
-/**
-## Results
 
-![Temperature field, embedded boundary close to a mesh face]
-(mini_cell/Temperature1.mp4)
+event tracer_diffusion(i++){
+  if(i%2==0){
+    diffusion(TL, dt = 1., muv);
+  }
+  else{
+    diffusion(TS, dt =1., muv);
+  }
+}
 
-![Temperature field, embedded boundary at the middle of a cell]
-(mini_cell/Temperature2.mp4)
+event LS_reinitialization(i++,last){
+  if(i>0 && i%2==0){
+    LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
+      1.4*nb_cell_NB);
+  }
+}
 
-~~~gnuplot Temperature profiles
-set term svg
-set xlabel 'Iteration count'
-set ylabel 'Temperature'
-set xrange [*:*]
-set yrange [-1.5:4]
-plot 'log' u 1:2 w l t 'T1_{min}', \
-     'log' u 1:3 w l t 'T1_{max}', \
-     'log' u 1:4 w l t 'T2_{min}', \
-     'log' u 1:5 w l t 'T2_{max}' 
-~~~
-*/
+#if DOUBLE_EMBED
+event double_calculation(i++,last){
+// modify the fs , cs, copy the outer fields in the partially covered cells
+
+  foreach(){
+    cs[]      = 1.-cs[];
+  }
+  foreach_face(){
+    fs.x[]      = 1.-fs.x[];
+  }
+
+  boundary({cs,fs});
+  restriction({cs,fs});
+}
+#endif
+
+event movies ( i+=2,last;t<200.)
+{
+  if(t>2.){
+  boundary({TL,TS});
+    scalar visu[];
+    foreach(){
+      visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
+    }
+    boundary({visu});
+    
+    draw_vof("cs");
+    squares("visu", min =-1., max = 1.);
+    save ("visu.mp4");
+    
+    boundary((scalar *){v_pc});
+    clear();
+    draw_vof("cs");
+    cells();
+    squares("v_pc.y", min =-3.e-3, max=3.e-3);
+    save ("v_pc.mp4");
+    stats s2    = statsf(v_pc.y);
+    Point p     = locate(-0.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
+
+    double cap  = capteur(p, TL);
+    double cap3  = capteur(p, TS);
+    double cap2 = capteur(p, cs);
+    double T_point = (1.-cap2)*cap + (cap2)*cap3;
+    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+      t, cap, cap2, cap3, T_point, s2.min, s2.max);
+  }  
+}
