@@ -17,10 +17,10 @@ The full algorithm is done on two iterations. It is the following :
   1. Define the diffusion coefficient
   1. Diffuse one tracer
   1. Reinit the level_set function
-  1. Change the inside and the outside of the embed boundary
+  1. Exchange the inside and the outside of the embed boundary
   1. Define the diffusion coefficient
   1. Diffuse the other tracer
-  1. Change the inside and the outside of the embed boundary
+  1. Exchange the inside and the outside of the embed boundary
 
 ![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
 
