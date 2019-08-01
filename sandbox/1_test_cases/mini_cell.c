@@ -22,6 +22,16 @@ The full algorithm is done on two iterations. It is the following :
   1. Diffuse the other tracer
   1. Change the inside and the outside of the embed boundary
 
+![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
+
+
+~~~gnuplot Phase change velocity
+f(x) = a + b*x
+fit f(x) 'log' u (log($1)):(log($7)) via a,b
+ftitle(a,b) = sprintf("%.3fexp^{%4.2f}t", a, b)
+set xrange[2:1200]
+plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
+~~~
 */
 
 #define DOUBLE_EMBED 1
