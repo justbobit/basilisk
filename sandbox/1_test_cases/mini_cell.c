@@ -24,14 +24,22 @@ The full algorithm is done on two iterations. It is the following :
 
 ![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
 
+![Animation of the velocity of the interface](mini_cell/v_pc.mp4)(loop)
+
 
 ~~~gnuplot Phase change velocity
 f(x) = a + b*x
 fit f(x) 'log' u (log($1)):(log($7)) via a,b
-ftitle(a,b) = sprintf("%.3fexp^{%4.2f}t", a, b)
-set xrange[2:1200]
+ftitle(a,b) = sprintf("%.3fexp^{{%4.2f}t}", a, b)
+set xrange[5:120]
 plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
 ~~~
+
+~~~gnuplot Temperature in the cell located at 
+plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperature', \
+    'log' u 1:5 w l t 'Approximated Temperature'
+~~~
+
 */
 
 #define DOUBLE_EMBED 1
@@ -43,15 +51,14 @@ plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
 #include "../level_set.h"
 #include "view.h"
 
-#define MIN_LEVEL 5
-#define MAXLEVEL 5
-#define latent_heat 10.
+#define MIN_LEVEL 6
+#define MAXLEVEL 6
+#define latent_heat 100.
 #define T_eq         0.
 #define TL_inf       1.
 #define TS_inf       -1.
 
-#define H0 -L0/3.-1.001*L0/(1 << MAXLEVEL)
-#define dH_refine (2.*L0/(1 << 5))
+#define H0 -0.45*L0
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -65,6 +72,7 @@ face vector muv[];
 mgstats mgT;
 scalar grad1[], grad2[];
 
+double lambda[2];
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
@@ -92,11 +100,15 @@ int main() {
 event init(t=0){
 
 
-  DT = 1.;
+  DT = L0/(1 << MAXLEVEL);
+
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
+  lambda[0] = 1.;
+  lambda[1] = 2.5;
+
   foreach_vertex(){
-      dist[] = plane(x,y,-(5.-0.5)*L0/(1 << MAXLEVEL));
+      dist[] = plane(x,y,H0);
     }
     boundary ({dist});
     restriction({dist});
@@ -115,23 +127,12 @@ event init(t=0){
 
 }
 
-event properties(i++){
-  double T[2];
-  T[0] = 1.;
-  T[1] = 1.4;
-
-  foreach_face()
-    muv.x[] = T[0]*fs.x[];
-  boundary((scalar *) {muv});
-
-}
-
 
 event tracer_advection(i++,last){
   if(i%2 == 0){
     double L_H       = latent_heat;  
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
-      nb_cell_NB);
+      nb_cell_NB,lambda);
 
     scalar cs0[];
     foreach()
@@ -150,12 +151,20 @@ event tracer_advection(i++,last){
   }
 }
 
+event properties(i++){
+  
+
+  foreach_face()
+    muv.x[] = lambda[i%2]*fs.x[];
+  boundary((scalar *) {muv});
+}
+
 event tracer_diffusion(i++){
   if(i%2==0){
-    diffusion(TL, dt = 1., muv);
+    diffusion(TL, L0/(1 << MAXLEVEL), D = muv, theta = cs);
   }
   else{
-    diffusion(TS, dt =1., muv);
+    diffusion(TS, L0/(1 << MAXLEVEL), D = muv , theta = cs);
   }
 }
 
@@ -182,10 +191,11 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i+=2,last;t<200.)
+event movies ( i+=2,last;t<240.)
 {
-  if(t>2.){
-  boundary({TL,TS});
+  if(t>0.1){
+    if(i%20==0){
+    boundary({TL,TS});
     scalar visu[];
     foreach(){
       visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
@@ -200,8 +210,10 @@ event movies ( i+=2,last;t<200.)
     clear();
     draw_vof("cs");
     cells();
-    squares("v_pc.y", min =-3.e-3, max=3.e-3);
+    squares("v_pc.y", min =0., max=0.06);
     save ("v_pc.mp4");
+    }
+
     stats s2    = statsf(v_pc.y);
     Point p     = locate(-0.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
 

@@ -51,11 +51,7 @@ event init (i = 0) {
 The timestep is set using the velocity field and the CFL
 criterion. The integration itself is performed in the events of
 [tracer.h](). */
-#if DOUBLE_EMBED
-event velocity (i+=2,last) {
-#else
 event velocity (i++,last) {
-#endif
   dt = dtnext (timestep (u, DT));
 }
 

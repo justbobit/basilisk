@@ -19,6 +19,9 @@ both fields.
 
 
 ![Animation of cs*u.x + (1-cs)*u2.x.](moving_embed/visu.mp4)(loop)
+
+![Animation of the velocity of the interface](moving_embed/v_pc.mp4)(loop)
+
 */
 
 #define DOUBLE_EMBED  1
@@ -56,6 +59,9 @@ scalar * level_set = {dist};
 face vector v_pc[];
 face vector muv[];
 mgstats mgT;
+
+
+double lambda[2];
 
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
@@ -98,13 +104,13 @@ event properties (i++)
 
 event init (t = 0)
 {
-  // #if TREE
-  //   refine (level < MAXLEVEL && plane(x,  y, (H0 - dH_refine)) > 0.
-  //           && plane(x, y, (H0 + dH_refine)) < 0.);
-  // #endif
-
 
   DT = CFL*L0 / (1 << MAXLEVEL);
+
+
+  lambda[0] = 1.;
+  lambda[1] = 1.;
+
   /**
   The domain is the intersection of a channel of width unity and a
   circle of diameter 0.125. */
@@ -137,7 +143,7 @@ event tracer_advection(i++,last){
   if(i%2 == 0){
     double L_H       = latent_heat;  
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
-      nb_cell_NB);
+      nb_cell_NB,lambda);
 
     scalar cs0[];
     foreach()
@@ -159,20 +165,14 @@ event tracer_advection(i++,last){
 
 event tracer_diffusion(i++){
 
-  if(i%2==0){
-
   foreach_face()
-    muv.x[] = fs.x[];
+    muv.x[] = lambda[i%2]*fs.x[];
   boundary((scalar *) {muv});
 
+  if(i%2==0){
     mgT = diffusion(TL, dt, fs);
   }
   else{
-
-  foreach_face()
-    muv.x[] = fs.x[];
-  boundary((scalar *) {muv});
-
     mgT = diffusion(TS, dt, muv);
   }
 }
@@ -189,10 +189,11 @@ event LS_reinitialization(i++,last){
 /**
 We produce an animation of the tracer field. */
 
-event movies ( i+=40,last;t<500.)
+event movies ( i+=2,last;t<500.)
 {
-  if(t>2.){
-  boundary({TL,TS});
+  if(t>0.1){
+    if(i%40==0){
+    boundary({TL,TS});
     scalar visu[];
     foreach(){
       visu[] = (1.-cs[])*TL[]+cs[]*TS[] ;
@@ -209,6 +210,7 @@ event movies ( i+=40,last;t<500.)
     cells();
     squares("v_pc.y", min =-3.e-3, max=3.e-3);
     save ("v_pc.mp4");
+    }
     stats s2    = statsf(v_pc.y);
     Point p     = locate(-0.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
 
@@ -231,7 +233,8 @@ plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperatu
 f(x) = a + b*x
 fit f(x) 'log' u (log($1)):(log($7)) via a,b
 ftitle(a,b) = sprintf("%.3f/x^{%4.2f}", exp(a), -b)
-set xrange[2:1200]
+set xrange[2:500]
+set yrange[0:9.e-3]
 plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
 ~~~
 
