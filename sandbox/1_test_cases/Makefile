@@ -2,15 +2,15 @@ CFLAGS +=  -O2
 
 include $(BASILISK)/Makefile.defs
 
-moving_embed.tst  : CFLAGS += -fopenmp
+moving_embed.tst  	: CFLAGS += -fopenmp
 
-mini_cell.tst  : CFLAGS += -fopenmp
+mini_cell.tst  		: CFLAGS += -fopenmp
 
-test_advection.tst: CFLAGS += -fopenmp
+test_advection.tst	: CFLAGS += -fopenmp
 
-update.tst        : CFLAGS += -fopenmp
+update.tst        	: CFLAGS += -fopenmp
 
-reversed.tst      : CFLAGS += -fopenmp
+reversed.tst      	: CFLAGS += -fopenmp
 
 solidification_Gibbs_Thomson.tst : CFLAGS += -events
 
