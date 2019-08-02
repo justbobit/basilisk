@@ -28,14 +28,18 @@ The full algorithm is done on two iterations. It is the following :
 
 
 ~~~gnuplot Phase change velocity
-f(x) = a + b*x
-fit f(x) 'log' u (log($1)):(log($7)) via a,b
-ftitle(a,b) = sprintf("%.3fexp^{{%4.2f}t}", a, b)
-set xrange[5:120]
-plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t ftitle(a,b)
+f(x) = a + b*x  + c*x**2 +d*x**3 + e*x**4
+fit f(x) 'log' u (log($1)):(log($7)) via a,b,c,d,e
+ftitle(a,b,c,d,e) = sprintf("%.3fexp^{{%4.2f}t+{%4.2f}t^2+{%4.2f}t^3+\
+{%4.2f}t^4",a,b,c,d,e)
+set grid
+set logscale
+plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t  \
+ftitle(a,b,c,d,e)
 ~~~
 
 ~~~gnuplot Temperature in the cell located at 
+set nologscale
 plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperature', \
     'log' u 1:5 w l t 'Approximated Temperature'
 ~~~
@@ -58,7 +62,7 @@ plot 'log' u 1:2 w l t 'Liquid Temperature',  'log' u 1:4 w l t 'Solid Temperatu
 #define TL_inf       1.
 #define TS_inf       -1.
 
-#define H0 -0.45*L0
+#define H0 -0.35*L0
 #define DT_MAX  1.
 
 #define T_eq         0.
@@ -105,7 +109,7 @@ event init(t=0){
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
   lambda[0] = 1.;
-  lambda[1] = 2.5;
+  lambda[1] = 1.;
 
   foreach_vertex(){
       dist[] = plane(x,y,H0);
@@ -119,6 +123,10 @@ event init(t=0){
   foreach() {
     TL[] = T_eq;
     TS[] = T_eq;
+  }
+
+  foreach_face(){
+    v_pc.x[] = 0.;
   }
 
   boundary({TL,TS});
@@ -148,6 +156,23 @@ event tracer_advection(i++,last){
     boundary({cs,fs});
     restriction({cs,fs});
 
+/** 
+An error is made on the estimation of the volume of the cell, only for certain
+cells. I want to try a simple correction propertional to that error which is :
+$$
+\epsilon_V = v_{pc}*dt - (cs^{n+1}-cs^n)*\Delta^2
+$$
+I've no success for now with that formulation.
+
+The best way to correct that error would be using an Arbitrary Lagrangian
+Eulerian formulation that integrates volume fluxes. TBD.
+*/
+    // foreach(){
+      // if((cs0[]!=0. && cs[] ==0.) || (cs0[]!=1. || cs[] ==1.)){
+        // TS[] +=  1.02*v_pc.y[]*L0/(1 << MAXLEVEL) ;
+        // TL[] +=  1.02*v_pc.y[]*L0/(1 << MAXLEVEL) ;
+      // }
+    // } 
   }
 }
 
@@ -161,10 +186,10 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   if(i%2==0){
-    diffusion(TL, L0/(1 << MAXLEVEL), D = muv, theta = cs);
+    diffusion(TL, L0/(1 << MAXLEVEL), D = muv);
   }
   else{
-    diffusion(TS, L0/(1 << MAXLEVEL), D = muv , theta = cs);
+    diffusion(TS, L0/(1 << MAXLEVEL), D = muv );
   }
 }
 
@@ -193,8 +218,8 @@ event double_calculation(i++,last){
 
 event movies ( i+=2,last;t<240.)
 {
-  if(t>0.1){
-    if(i%20==0){
+  if(t>1.){
+    if(i%80==0){
     boundary({TL,TS});
     scalar visu[];
     foreach(){
@@ -210,7 +235,7 @@ event movies ( i+=2,last;t<240.)
     clear();
     draw_vof("cs");
     cells();
-    squares("v_pc.y", min =0., max=0.06);
+    squares("v_pc.y", min =0.01, max=0.015);
     save ("v_pc.mp4");
     }
 
@@ -224,4 +249,8 @@ event movies ( i+=2,last;t<240.)
     fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
       t, cap, cap2, cap3, T_point, s2.min, s2.max);
   }  
+}
+
+event dumps(t=25.){
+  dump();
 }

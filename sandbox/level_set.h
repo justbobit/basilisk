@@ -189,11 +189,12 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
           k2 = 1; 
           }
         }
-        v_pc2.x[] = (v_pc.x[sig[0]*k1,sig[1]*k2])*
-                    exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/(4*Delta)));
-        v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]*
-                    exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/(4*Delta)));
-      }
+        v_pc2.x[] = (v_pc.x[sig[0]*k1,sig[1]*k2])
+                    *exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/
+                      (2.*nb_cell_NB*Delta)));
+        v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]
+                    *exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/
+                      (2.*nb_cell_NB*Delta)));
     }
     boundary((scalar *){v_pc2});
     restriction((scalar *){v_pc2});    
