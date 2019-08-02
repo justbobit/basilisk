@@ -28,14 +28,13 @@ The full algorithm is done on two iterations. It is the following :
 
 
 ~~~gnuplot Phase change velocity
-f(x) = a + b*x  + c*x**2 +d*x**3 + e*x**4
-fit f(x) 'log' u (log($1)):(log($7)) via a,b,c,d,e
-ftitle(a,b,c,d,e) = sprintf("%.3fexp^{{%4.2f}t+{%4.2f}t^2+{%4.2f}t^3+\
-{%4.2f}t^4",a,b,c,d,e)
+f(x) = a + b*x  + c*x**2 +d*x**3
+fit f(x) 'log' u (log($1)):(log($7)) via a,b,c,d
+ftitle(a,b,c,d) = sprintf("%.3fexp^{{%4.2f}t+{%4.2f}t^2+{%4.2f}t^3",a,b,c,d)
 set grid
 set logscale
 plot 'log' u 1:7 w l t 'Phase Change Velocity', exp(f(log(x))) t  \
-ftitle(a,b,c,d,e)
+ftitle(a,b,c,d)
 ~~~
 
 ~~~gnuplot Temperature in the cell located at 
@@ -158,21 +157,20 @@ event tracer_advection(i++,last){
 
 /** 
 An error is made on the estimation of the volume of the cell, only for certain
-cells. I want to try a simple correction propertional to that error which is :
+cells. Here we try a simple correction propertional to that error which is :
 $$
 \epsilon_V = v_{pc}*dt - (cs^{n+1}-cs^n)*\Delta^2
 $$
-I've no success for now with that formulation.
 
 The best way to correct that error would be using an Arbitrary Lagrangian
 Eulerian formulation that integrates volume fluxes. TBD.
 */
-    // foreach(){
-      // if((cs0[]!=0. && cs[] ==0.) || (cs0[]!=1. || cs[] ==1.)){
-        // TS[] +=  1.02*v_pc.y[]*L0/(1 << MAXLEVEL) ;
-        // TL[] +=  1.02*v_pc.y[]*L0/(1 << MAXLEVEL) ;
-      // }
-    // } 
+    foreach(){
+      if((cs0[]!=0. && cs[] ==0.) || (cs0[]!=1. || cs[] ==1.)){
+        TS[] +=  1.05*v_pc.y[]*L0/(1 << MAXLEVEL) ;
+        TL[] +=  1.05*v_pc.y[]*L0/(1 << MAXLEVEL) ;
+      }
+    } 
   }
 }
 

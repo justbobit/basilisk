@@ -60,7 +60,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         //   temp += v_pc.x[]*v_pc.x[];
         // }
         // temp = -0.2*sqrt(temp);
-        double grad = dirichlet_gradient(point, tr, cs , n, p, temp, &c);
+        double grad = dirichlet_gradient(point, tr, cs , n, p, 
+          temp, &c);
         foreach_dimension(){
           gtr.x[] += grad*n.x;
         }
@@ -94,7 +95,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         //   temp += v_pc.x[]*v_pc.x[];
         // }
         // temp = -0.2*sqrt(temp);
-        double grad = dirichlet_gradient(point, tr2, cs , n, p, temp, &c);
+        double grad = dirichlet_gradient(point, tr2, cs , n, p, 
+          temp, &c);
         foreach_dimension(){
           gtr2.x[] += grad*n.x;
         }
@@ -146,7 +148,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   int ii;
   for (ii=1; ii<=nb_cell_NB; ii++){
     foreach(){
-      if(fabs(dist[])<0.9*NB_width){
+      // if(fabs(dist[])<0.9*NB_width){
 
         coord grad_dist;
         if(dist[]>0.){
@@ -195,6 +197,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]
                     *exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/
                       (2.*nb_cell_NB*Delta)));
+      // }
     }
     boundary((scalar *){v_pc2});
     restriction((scalar *){v_pc2});    
