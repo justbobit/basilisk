@@ -1,4 +1,4 @@
-pristine:66f8f29b7a18b74f5f2dfa1e693cfc85ee7585029ed714db0af5100ec584879f
+pristine:ff8ce6daa9997852c4dd209114835c37f0da1269f44a301d7bacf5eb015fa43d
 Starting with inventory:
 0000014052-aed92a036e11a4793701cca85e63723492768df7a17c4106201926ef05ca16cf
 [TAG release 2019-05-24
@@ -213,3 +213,28 @@ limarealexandre@gmail.com**20190710095152
  Ignore-this: cbcc4240d84b93e3dd2b9b8c21c1c9f8
 ] 
 hash: 0000136018-88b3e88c33a29a487477ae7481015ef575276fe154a3c6e7c8d7e543fc10256f
+[A serious bug fix for low-resolution interface curvature calculations
+Stephane Popinet <popinet@basilisk.fr>**20190819072356
+ Ignore-this: aadb14c469e3e8c6478cb23386e694a8
+ 
+ Thanks to Petr Karnakov for reporting this. The bug was introduced by this patch
+ 
+ Wed Dec 13 10:21:38 CET 2017  Stephane Popinet 
+ * Generic interfacial force implementation
+ 
+ http://basilisk.fr/src/curvature.h?changes=20171213092138
+ 
+ and will affect all calculations with surface tension involving
+ under-resolved interfaces.
+] 
+hash: 0000001004-720b6c42184a15be2baa644fd2e0cd0dd52426f05d90ea3e55bf24c13f1b45e1
+[Better handling of warnings in darcsit
+Stephane Popinet <popinet@basilisk.fr>**20190525160740
+ Ignore-this: dc7d7244d9f9997eedbefa3ddb345a9a
+] 
+hash: 0000005987-d6ea0ff01f1ce9d2b35f538213a04500d3c00fb3846b137f0b6c6c7c4b28e537
+[Fixed conflict
+Stephane Popinet <popinet@basilisk.fr>**20190819073854
+ Ignore-this: fb70756600e00da323a889989dd441d8
+] 
+hash: 0000000915-34e4a05d35d273f3cfe2b6a5f023ca9551288d66c602f5bff9887b8d59293cb0
