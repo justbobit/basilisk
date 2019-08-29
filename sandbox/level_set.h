@@ -131,7 +131,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   foreach_face(){
     if ( (  fs.y[] !=0. && fs.y[] != 1.   ) 
               && fabs(dist[])<=0.9*NB_width){
-      v_pc.x[]     =  (lambda[1]*gtr2.x[] - lambda[0]*gtr.x[])*0.02;
+      v_pc.x[]     =  (lambda[1]*gtr2.x[] - lambda[0]*gtr.x[])/L_H;
       v_pc2.x[]    = v_pc.x[];
     }
   }
