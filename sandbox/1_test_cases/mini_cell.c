@@ -40,19 +40,21 @@ set grid
 set xlabel "time"
 set ylabel "log(v_{pc})"
 #set logscale y
-aa = 300.
-set term pngcairo size 1024,800
-plot 'log1' u 1:(log($7)) w p pointtype 2  t latent(aa/1),\
+aa = 100.
+set term pngcairo size 1800,1000
+plot 'log1' u 1:(log($7)) w l  t latent(aa/1),\
          f(x) w l lw 3 t ftitle(a,b), \
-    'log2' u 1:(log($7)) w p pointtype 2  t latent(aa/2), \
+    'log2' u 1:(log($7)) w l pointtype 2  t latent(aa/2), \
         f2(x) t ftitle(a2,b2), \
-    'log3'  u 1:(log($7)) w p pointtype 2 lc rgb "blue" t latent(aa/3), \
+    'log3'  u 1:(log($7)) w l pointtype 2 lc rgb "blue" t latent(aa/3), \
         f3(x) t ftitle(a3,b3)
 ~~~
 
 ~~~gnuplot Temperature in the cell located at 
-plot 'log1' u 1:2 w l lw 3t 'Liquid Temperature',  'log1' u 1:4 w l lw 3 t \
-'Solid Temperature',  'log' u 1:5 w l lw 3 t 'Approximated Temperature'
+set title 'Temperature in one cell' font 'Helvetica,20'
+plot 'log3' u 1:2 w l t 'Liquid Temperature',  \
+     'log3' u 1:4 w l  t 'Solid Temperature',  \
+     'log3' u 1:5 w l lw 2 dt 2 lt 8 t 'Approximated Temperature'
 ~~~
 
 */
@@ -112,9 +114,14 @@ int main() {
   
   j = 1;
   for (j=1;j<=3;j++){
+
+/**
+Here we set up the parameters of our simulation. The latent heat $L_H$, the
+initial position of the interface $h_0$ and the resolution of the grid.
+*/
     latent_heat  = 300./j;
-    MAXLEVEL = MIN_LEVEL = 5;
-    H0 = -0.3*L0;
+    MAXLEVEL = MIN_LEVEL = 4;
+    H0 = -0.38*L0;
     N = 1 << MAXLEVEL;
     snprintf(filename, 100,  "log%d", j);
     fp1 = fopen (filename,"w");
@@ -247,10 +254,10 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i+=2,last;t<130.)
+event movies ( i+=2,last;t<400.)
 {
-  if(t>20.){
-    if(i%20==0 && j ==3){
+  if(t>30.){
+    if(i%20==0 && j ==1){
     boundary({TL,TS});
     scalar visu[];
     foreach(){
@@ -271,7 +278,7 @@ event movies ( i+=2,last;t<130.)
     }
 
     stats s2    = statsf(v_pc.y);
-    Point p     = locate(-0.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
+    Point p     = locate(-3.5*L0/(1<<MIN_LEVEL),-1.51*L0/(1<<MIN_LEVEL));
 
     double cap  = capteur(p, TL);
     double cap3 = capteur(p, TS);
