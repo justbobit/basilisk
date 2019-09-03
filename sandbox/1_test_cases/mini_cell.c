@@ -31,11 +31,11 @@ The full algorithm is done on two iterations. It is the following :
 ~~~gnuplot Phase change velocity
 set term pngcairo size 800,800
 f(x)  = a  - x/b
-#f2(x) = a2 - x/b2  
-#f3(x) = a3 - x/b3  
+f2(x) = a2 - x/b2  
+f3(x) = a3 - x/b3  
 fit f(x)  'log1' u ($1):(log($7)) via a ,b
-#fit f2(x) 'log2' u ($1):(log($7)) via a2,b2
-#fit f3(x) 'log3' u ($1):(log($7)) via a3,b3
+fit f2(x) 'log2' u ($1):(log($7)) via a2,b2
+fit f3(x) 'log3' u ($1):(log($7)) via a3,b3
 ftitle(a,b) = sprintf("%.3fexp^{t/{%4.4f}}",a,b)
 latent(a) = sprintf("L_H  %4.4f",a)
 set grid
@@ -43,13 +43,14 @@ set xlabel "time"
 set ylabel "log(v_{pc})"
 #set logscale y
 aa = 100.
-plot 'log1' u 1:(log($7)) w l  t latent(aa/1)
-#plot 'log1' u 1:(log($7)) w l  t latent(aa/1),\
-#         f(x) w l lw 3 t ftitle(a,b), \
-#    'log2' u 1:(log($7)) w l pointtype 2  t latent(aa/2), \
-#        f2(x) t ftitle(a2,b2), \
-#    'log3'  u 1:(log($7)) w l pointtype 2 lc rgb "blue" t latent(aa/3), \
-#        f3(x) t ftitle(a3,b3)
+#plot 'log1' u 1:(log($7)) w l  t latent(aa/1), \
+#      f(x) w l lw 3 t ftitle(a,b)
+plot 'log1' u 1:(log($7)) w l  t latent(aa/1),\
+         f(x) w l dt 2 t ftitle(a,b), \
+    'log2' u 1:(log($7)) w l pointtype 2  t latent(aa/2), \
+        f2(x) dt 2 t ftitle(a2,b2), \
+    'log3'  u 1:(log($7)) w l pointtype 2 lc rgb "blue" t latent(aa/3), \
+        f3(x) dt 2 t ftitle(a3,b3)
 ~~~
 
 ~~~gnuplot Temperature in the cell located at 
@@ -108,7 +109,7 @@ TL[top]    = dirichlet(TL_inf);
 TS[embed]  = dirichlet(T_eq);
 TS[bottom] = dirichlet(TS_inf); 
 int j;
-
+int k_loop = 0;
 /**
 The domain is 4 units long, centered vertically. */
 
@@ -118,16 +119,17 @@ int main() {
   origin (-L0/2., -L0/2.);
   
   j = 1;
-  for (j=1;j<=1;j++){
+  for (j=1;j<=3;j++){
 
 /**
 Here we set up the parameters of our simulation. The latent heat $L_H$, the
 initial position of the interface $h_0$ and the resolution of the grid.
 */
     latent_heat  = 100./j;
-    MAXLEVEL = MIN_LEVEL = 4;
+    MAXLEVEL = MIN_LEVEL = 5;
 
     H0 = -0.3*L0; 
+    // H0 = -1.501*L0 / (1 << MAXLEVEL); 
     N = 1 << MAXLEVEL;
     snprintf(filename, 100,  "log%d", j);
     fp1 = fopen (filename,"w");
@@ -170,6 +172,7 @@ event init(t=0){
   boundary({TL,TS});
   restriction({TL,TS});
 
+ 
 }
 
 
@@ -182,27 +185,34 @@ event properties(i++){
 }
 
 event tracer_diffusion(i++){
-  if(i%2==0){
-    mg1 = diffusion(TL, L0/(1 << MAXLEVEL), D = muv);
-  }
-  else{
-    mg2 = diffusion(TS, L0/(1 << MAXLEVEL), D = muv );
+  int kk;
+  for (kk=1;kk<=(40*k_loop+1);kk++){
+    if(i%2==0){
+      mg1 = diffusion(TL, L0/(1 << MAXLEVEL), D = muv);
+    }
+    else{
+      mg2 = diffusion(TS, L0/(1 << MAXLEVEL), D = muv );
+    }
   }
 }
 
 
 event LS_advection(i++,last){
-  if(i%2 == 1 ){
+  if(i%2 == 1){
     double L_H       = latent_heat;  
 
+    scalar cs0[];
+
+
     foreach(){
+      cs0[]   = cs[];
       cs[]    = 1.-cs[];
     }
     foreach_face(){
       fs.x[]  = 1.-fs.x[];
     }
 
-    boundary({cs,fs});
+    boundary({cs,fs,cs0});
     restriction({cs,fs});
 
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
@@ -227,6 +237,10 @@ event LS_advection(i++,last){
     restriction({cs,fs});
     // event ("properties");
 
+    k_loop = 0;
+    foreach(){
+      if(cs0[] != 1. && cs[] ==1.)k_loop = 1;
+    }
   }
 }
 
@@ -238,7 +252,6 @@ event LS_reinitialization(i++,last){
       1.4*nb_cell_NB);
   }
 }
-
 
 #if DOUBLE_EMBED
 event double_calculation(i++,last){
@@ -256,9 +269,9 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<200.)
+event movies ( i++,last;t<300.)
 {
-  if(i%2 == 1) {
+  if(i%2 == 1 && t > 50) {
     if(i%20==1 && j ==1){
     boundary({TL,TS});
     scalar visu[];
@@ -275,7 +288,7 @@ event movies ( i++,last;t<200.)
     }
 
     stats s2    = statsf(v_pc.y);
-    Point p     = locate(-1.5*L0/(1<<MIN_LEVEL),-2.51*L0/(1<<MIN_LEVEL));
+    Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
 
     double cap  = capteur(p, TL);
     double cap3 = capteur(p, TS);
@@ -283,7 +296,7 @@ event movies ( i++,last;t<200.)
     double T_point = cap2*cap + (1.-cap2)*cap3;
     fprintf (fp1, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
       t, cap, cap2, cap3, T_point, s2.min, s2.max);
-    fprintf(fp1, "## %g %g\n", mg1.resa, mg2.resa);
+    fprintf(fp1, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
   }
 }
 
