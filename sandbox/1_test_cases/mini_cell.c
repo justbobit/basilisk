@@ -24,8 +24,6 @@ The full algorithm is done on two iterations. It is the following :
 
 ![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
 
-![Animation of the velocity of the interface](mini_cell/v_pc.mp4)(loop)
-
 
 
 ~~~gnuplot Phase change velocity
