@@ -7,8 +7,7 @@ scalar dist[];
 face vector v_pc[];
 scalar * level_set = {dist};
 
-double  NB_width = 1 ;              // length of the NB
-#define MAXLEVEL 7
+#define MAXLEVEL 5
 int nb_cell_NB;
 
 double geometry(double x, double y, double Radius) {
@@ -36,7 +35,7 @@ double geometry(double x, double y, double Radius) {
 int main(){
 	int N = 1 << MAXLEVEL;
 	init_grid(N);
-	nb_cell_NB = 1 << 3 ;
+	nb_cell_NB = 1 << 2 ;
 
 
   foreach_vertex() {
@@ -90,11 +89,13 @@ int main(){
     	x_tag[] = x_tag1[];
     }
   }
+  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
+  	bg = {1,1,1}, width = 600, height = 600, samples = 1);
   cells();
 	draw_vof("cs");
   squares("x_tag", min =0., max = 1.);
   save ("x_tag.png");
-
+  dump();
 
 // /**
 // Here we try define method to reconstruct a speed calculated in interfacial cells
