@@ -7,9 +7,10 @@ solver.
 
 This event integrates advection equations of the form
 $$
-\partial_tLS+\mathbf{u_f}\cdot\nabla LS=0
+\partial_t\phi+\mathbf{u_f}\cdot\nabla \phi=0
 $$
-where $\mathbf{u_f}$ is the velocity field and $LS$ is the level set function.
+where $\mathbf{u_f}$ is the velocity field and $\phi$ is the level set 
+function.
 
  */
 extern scalar * level_set;
@@ -114,11 +115,11 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   restriction({cs,fs});
 
   /**
-  With the the normal vector and the gradients of the tracers we can now compute
-  the phase change velocity $\mathbf{v}_{pc}$, following the lines drawn in
-  [meanflow.c](/sandbox/popinet/meanflow.c). We define it as the product between
-  the density ratio and the diffusive flow. Note that $\mathbf{v}_{pc}$ is 
-  weighted by the face metric. */
+  With the the normal vector and the gradients of the tracers we can now 
+  compute the phase change velocity $\mathbf{v}_{pc}$, following the lines
+  drawn in [meanflow.c](/sandbox/popinet/meanflow.c). We define it as the
+  product between the density ratio and the diffusive flow. Note that $\mathbf
+  {v}_{pc}$ is weighted by the face metric. */
   
   face vector v_pc2[];
   foreach_face() {
@@ -307,17 +308,18 @@ event LS_reinitialization(i++,last) {
 
 V2 of the reinit function with subcell correction.
 Based on the work of Russo2000.
-$$\phi^n+1 = \phi^n - \Delta t S(\phi) G(\phi)$$
+$$\phi^{n+1} = \phi^n - \Delta t S(\phi) G(\phi)$$
 far from the interface.
 
 Near the interface it is modified to :
-$$\phi^n+1 = phi^n - \Delta t/\Delta x ( sgn(\phi^0) |\phi^n| - Di)$$
+$$\phi^{n+1} = \phi^n - \frac{\Delta t}{\Delta x} ( sgn(\phi^0) |\phi^n| - 
+D_i)$$
 
 with:
-$$Di = \Delta x * \phi_i^0/\Delta \phi_0^i$$.
+$$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_0^i}$$.
 
 with:  
-$$\Delta \phi_0^i = max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
+$$\Delta \phi_0^i = \max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
 \phi^0_{i}-\phi^0_{i+1})$$  
   
 
