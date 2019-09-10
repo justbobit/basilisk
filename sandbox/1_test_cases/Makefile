@@ -2,18 +2,21 @@ CFLAGS +=  -O2
 
 include $(BASILISK)/Makefile.defs
 
-moving_embed.tst  	: CFLAGS += -fopenmp
+dirichlet.tst 						: CFLAGS += -DDIRICHLET=1 -DMTRACE=3
+	
+dirichlet.c                         : neumann_double.c
+					ln -s neumann_double.c dirichlet.c
 
-mini_cell.tst  		: CFLAGS += -fopenmp
+mini_cell.tst  						: CFLAGS += -fopenmp
 
-test_advection.tst	: CFLAGS += -fopenmp
+moving_embed.tst  					: CFLAGS += -fopenmp
 
-update.tst        	: CFLAGS += -fopenmp
+recons_speed.tst					: CFLAGS += -catch
 
-reversed.tst      	: CFLAGS += -fopenmp
+reversed.tst      					: CFLAGS += -fopenmp
 
-solidification_Gibbs_Thomson.tst : CFLAGS += -events
+solidification_Gibbs_Thomson.tst 	: CFLAGS += -events
 
-dirichlet.tst: CFLAGS += -DDIRICHLET=1 -DMTRACE=3
-dirichlet.c: neumann_double.c
-	ln -s neumann_double.c dirichlet.c
+test_advection.tst					: CFLAGS += -fopenmp
+
+update.tst     					   	: CFLAGS += -fopenmp

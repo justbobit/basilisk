@@ -145,73 +145,74 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   distance function, it only eases the reinit process of the level set.
 
   */
+  velocity_extension(v_pc,cs,dist,dt);
+}
+
+
+/**
+Hamilton-Jacobi-type equation derived from [Peng et al., 1999]
+(#peng_pde-based_1999) :
+
+$$
+\partial_t v_{pc]  + 
+S(\phi) \frac{\nabla \phi}{|\nabla \phi|}. \nabla v_pc 
+= 0
+$$
+*/
+
+void velocity_extension(face vector v_pc, scalar cs, scalar dist, double dt){
+
+  face vector uf_vpc[];
+  vector n_dist[];
+
+/**
+first part : calculate $ S(\phi) \frac{\nabla \phi}{|\nabla \phi|} $
+*/
+
+
+  foreach(){
+    double sum=0;
+    vector grad_dist;
+    foreach_dimension(){
+      grad_dist.x = (dist[1,0]-dist[-1,0])/(2*Delta)
+      sum += grad_dist.x[]*grad_dist.x[];
+    }
+    foreach_dimension(){
+      n_dist[] = grad_dist.x/sqrt(sum)*sign2(dist[]);
+    }
+
+
+
+  }
+
+scalar * components;
+
+components = {v_pc.x,v_pc.y};
+
+/**
+Second part do the advection a few times to extend the velocity from the 
+surface along the normal to the surface. 
+*/ 
 
   int ii;
   for (ii=1; ii<=nb_cell_NB; ii++){
-    foreach(){
-      // if(fabs(dist[])<0.9*NB_width){
-
-        coord grad_dist;
-        if(dist[]>0.){
+    for (scalar f in components){
+      foreach(){
         foreach_dimension(){
-          double a = max(0.,dist[]    - dist[-1,0]);
-          double b = min(0.,dist[1,0] - dist[]    );
-          grad_dist.x = max(a,b);
-          }
+          f[] -= dt *(max(n_dist[],0.)*(dist[   ]-dist[-1,0])/Delta
+                     +min(n_dist[],0.)*(dist[1,0]-dist[    ])/Delta);
         }
-        else{
-          foreach_dimension(){
-            double a = min(0.,dist[]    - dist[-1,0]);
-            double b = max(0.,dist[1,0] - dist[]    );
-           grad_dist.x = max(a,b);
-          }
-        }
-        int k1, k2;
-        int sig[2] = {1 , 1 };
-        if(dist[]>0.){
-          if(grad_dist.x>0) sig[0] = -1;
-          if(grad_dist.y>0) sig[1] = -1;
-        }
-        else{
-          if(grad_dist.x<0) sig[0] = -1;
-          if(grad_dist.y<0) sig[1] = -1;
-        }
-        
-        double ratio = fabs(grad_dist.x)/(max(SEPS,fabs(grad_dist.y))) ;
-        if(ratio > sqrt(3.)){
-          k1 = 1;
-          k2 = 0;
-        }
-        else{
-          if(ratio > 1./sqrt(3.)){
-            k1 = 1;
-            k2 = 1;   
-          }
-        else{
-          k1 = 0;
-          k2 = 1; 
-          }
-        }
-        v_pc2.x[] = (v_pc.x[sig[0]*k1,sig[1]*k2])
-                    *exp( -((fabs(dist[]-grad_dist.x*Delta/2.))/
-                      (2.*nb_cell_NB*Delta)));
-        v_pc2.y[] = v_pc.y[sig[0]*k1,sig[1]*k2]
-                    *exp( -((fabs(dist[]-grad_dist.y*Delta/2.))/
-                      (2.*nb_cell_NB*Delta)));
-      // }
+      }
+
     }
-    boundary((scalar *){v_pc2});
-    restriction((scalar *){v_pc2});    
-
-
-    foreach_face(){
-      if(v_pc.x[]==0. && v_pc2.x[] !=0.) v_pc.x[] = v_pc2.x[];
-    }
-
-    boundary((scalar *){v_pc});
-    restriction((scalar *){v_pc});
   }
+
 }
+
+/**
+We redefine the fluxes for the level set advection and reconstruction of the
+associated velocity field, they do not take into account the embedded boundaries
+*/ 
 
 
 void tracer_fluxes_LS (scalar f,
@@ -438,4 +439,24 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
     //   res,eps);
   }
 }
+/**
+## References
 
+~~~bib
+
+@article{peng_pde-based_1999,
+  title = {A {PDE}-Based Fast Local Level Set Method},
+  volume = {155},
+  issn = {0021-9991},
+  url = {http://www.sciencedirect.com/science/article/pii/S0021999199963453},
+  doi = {10.1006/jcph.1999.6345},
+  pages = {410--438},
+  number = {2},
+  journaltitle = {Journal of Computational Physics},
+  author = {Peng, Danping and Merriman, Barry and Osher, Stanley and Zhao, Hongkai and Kang, Myungjoo},
+  urldate = {2019-09-09},
+  date = {1999-11}
+}
+~~~
+
+*/
