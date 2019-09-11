@@ -171,7 +171,7 @@ int main(){
     dist[] = -geometry(x,y,L0/5.);
   }
   int iloop;
-  for(iloop=1; iloop<=9000;iloop++){
+  for(iloop=1; iloop<=2000;iloop++){
 
   fprintf(stderr, "%d\n", iloop);
 
@@ -195,9 +195,10 @@ int main(){
     if(cs[] != 0. && cs[] != 1.){
       double theta = atan2 (y-L0/2., x-L0/2.);
       // v_pc.x[] = 0.01;
-      v_pc.x[] = 0.9*L0/(1<< MAXLEVEL)*cos(2.*theta);
-      // v_pc.y[] = 0.;
-      v_pc.y[] = 0.9*L0/(1<< MAXLEVEL)*sin(4.*theta);
+      // v_pc.x[] = 0.7*L0/(1<< MAXLEVEL)+0.7*L0/(1<< MAXLEVEL)*cos(2.*theta);
+      v_pc.x[] = 0.4*L0/(1<< MAXLEVEL);
+      v_pc.y[] = 0.;
+      // v_pc.y[] = 0.7*L0/(1<< MAXLEVEL)*sin(4.*theta);
      }
      else{
       v_pc.x[] = 0.;
@@ -206,7 +207,6 @@ int main(){
   }
   
   boundary((scalar*){v_pc});
-
 
   vector n_dist[], grad_dist[];
 
@@ -232,7 +232,8 @@ using a centered approximation
 
     double sum=1e-15;
     foreach_dimension(){
-      grad_dist.x[] = (dist[1,0]-dist[-1,0])/(2*Delta);
+      grad_dist.x[] = min(dist[1,0]-dist[],
+      			min(dist[]-dist[-1,0],(dist[1,0]-dist[-1,0])/2))/Delta;
       sum += grad_dist.x[]*grad_dist.x[];
 
     }
@@ -252,8 +253,9 @@ surface along the normal to the surface.
 */ 
 
   dt = L0/(1 << MAXLEVEL);
+
   int ii;
-  for (ii=1; ii<=nb_cell_NB; ii++){
+  for (ii=1; ii<=5*nb_cell_NB; ii++){
     for (scalar f in velocity){
     	scalar f2[];
     	foreach(){
@@ -263,42 +265,44 @@ surface along the normal to the surface.
     	restriction({f2});
 
       foreach(){
-        foreach_dimension(){
-        	if(cs[] ==0. || cs[] == 1.){
-	          f[] -= dt *(max(n_dist.x[],0.)*(f2[   ]-f2[-1,0])/Delta
-	                     +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
-          }
+      	if(fabs(dist[])<0.9*NB_width){
+	        foreach_dimension(){
+	        	if(cs[] ==0. || cs[] == 1.){
+		          f[] -= dt *(max(n_dist.x[],0.)*(f2[   ]-f2[-1,0])/Delta
+		                     +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
+	          }
+	        }
         }
       }
       boundary({f});
       restriction({f});
     }
   }
-
-  if(iloop%40 ==0){
-	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-	  draw_vof("cs");
-	  squares("v_pc.x", min =-0.1, max = 0.1);
-	  save ("vpcx.mp4");
-	  clear();  
-	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-	  draw_vof("cs");
-	  squares("dist", min =-0.1, max = 0.1);
-	  save ("dist.mp4");
-  }
-
-
+  
 /**
-advection with the reconstructed speed
+Advection with the reconstructed speed
 */   
   advection(level_set, v_pc, L0 / (1 << MAXLEVEL));
 
-  LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
+  LS_reinit2(dist,0.8*L0/(1 << MAXLEVEL), 1.4*NB_width,
       1.4*nb_cell_NB);
-  
+  if(iloop%20 == 0){
+	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
+	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+	  draw_vof("cs");
+	  squares("dist", min =-NB_width, max = NB_width);
+	  save ("dist.mp4");
+  clear();  
+
+	  draw_vof("cs");
+	  squares("v_pc.x", min =-0.2*L0/(1 << MAXLEVEL), 
+	  	max = 0.2*L0/(1 << MAXLEVEL));
+	  save ("vpcx.mp4");
+  }
+	
 	}
+	
+		dump();
 }
 
 /**

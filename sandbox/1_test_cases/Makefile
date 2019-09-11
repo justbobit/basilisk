@@ -11,7 +11,7 @@ mini_cell.tst  						: CFLAGS += -fopenmp
 
 moving_embed.tst  					: CFLAGS += -fopenmp
 
-recons_speed.tst					: CFLAGS += -catch
+recons_speed.tst					: CFLAGS += -fopenmp
 
 reversed.tst      					: CFLAGS += -fopenmp
 
