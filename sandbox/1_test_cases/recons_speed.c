@@ -14,10 +14,8 @@ of function in my sandbox.
 #include "embed.h"
 #include "basic_geom.h"
 #include "view.h"
-#define MAXLEVEL 5
+#define MAXLEVEL 7
 
-
-double (* gradient) (double, double, double) = NULL;
 
 scalar dist[];
 face vector v_pc[];
@@ -26,6 +24,7 @@ scalar * level_set = {dist};
 scalar * velocity = {v_pc.x,v_pc.y};
 
 int nb_cell_NB;
+double  NB_width ;              // length of the NB
 
 /**
 The initial interface defined by the level set function is a circle.
@@ -46,6 +45,7 @@ double geometry(double x, double y, double Radius) {
   double s = circle (x, y, center_circle, Radius);
 
   double zalesak = -s;
+  // double zalesak = y-0.45;
 
   return zalesak;
 }
@@ -55,22 +55,134 @@ double sign2 (double x)
   return(x > 0. ? 1. : x<0 ? -1. : 0.);
 }
 
+void LS_reinit2(scalar dist, double dt, double NB, int it_max){
+  vector gr_LS[];
+  int i ;
+  double eps = dt/100., eps2 = eps/2.;
+  scalar dist0[], dist_eps[];
+  foreach()
+    dist0[] = dist[] ;
+  boundary({dist0});
+
+  for (i = 1; i<=it_max ; i++){
+    double res=0.;
+    foreach(){
+      dist_eps[] = dist[] ;
+    }
+    boundary({dist_eps});
+    
+    double xCFL = 1.;
+// 1) we make a copy of dist before iterating on it
+// 2) we determine xCFL according to the local size
+    int sum = 0;
+    foreach(reduction(min:xCFL) reduction(+:sum)){
+        sum ++;
+        //min_neighb : variable for detection if cell is near
+        //             the zero of the level set function
+
+        double min_neighb = 1.;
+        foreach_dimension(){
+          min_neighb = min (min_neighb, dist_eps[-1,0]*dist_eps[]); 
+          min_neighb = min (min_neighb, dist_eps[ 1,0]*dist_eps[]);
+        }
+
+        if(min_neighb < 0.){
+          double dist1= 0., dist2= 0.,dist3= 0.;
+          foreach_dimension(){
+            dist1 += pow((dist0[1,0]-dist0[-1,0])/2.,2.);
+            dist2 += pow((dist0[1,0]-dist0[    ]),2.);
+            dist3 += pow((dist0[   ]-dist0[-1,0]),2.);
+          }
+          double Dij = Delta*dist0[]/
+                  max(eps2,sqrt(max(dist1,max(dist2,dist3))));
+  // stability condition near the interface is modified
+          xCFL = min(xCFL,fabs(Dij)/(Delta));
+        }
+    }
+    foreach(reduction(max:res)){
+      double delt =0.;
+        //min_neighb : variable for detection if cell is near
+        //             the zero of the level set function
+
+        double min_neighb = 1.;
+        foreach_dimension(){
+          min_neighb = min (min_neighb, dist_eps[-1,0]*dist_eps[]);
+          min_neighb = min (min_neighb, dist_eps[ 1,0]*dist_eps[]);
+        }
+
+        if(min_neighb < 0.){
+          double dist1= 0., dist2= 0.,dist3= 0.;
+          foreach_dimension(){
+            dist1 += pow((dist0[1,0]-dist0[-1,0])/2.,2.);
+            dist2 += pow((dist0[1,0]-dist0[    ]),2.);
+            dist3 += pow((dist0[   ]-dist0[-1,0]),2.);
+          }
+          double Dij = Delta*dist0[]/
+                  max(eps2,sqrt(max(dist1,max(dist2,dist3))));
+          delt = (sign2(dist0[])*fabs(dist_eps[])-Dij)/Delta;
+        }
+        else 
+          if(dist0[]>0){
+          foreach_dimension(){
+            double a = max(0.,(dist_eps[]    - dist_eps[-1,0])/Delta);
+            double b = min(0.,(dist_eps[1,0] - dist_eps[]    )/Delta);
+            delt   += max(pow(a,2.),pow(b,2.));
+          }
+          delt = sign2(dist0[])*(sqrt(delt) - 1.);
+        }
+        else{
+          foreach_dimension(){
+            double a = min(0.,(dist_eps[]    - dist_eps[-1,0])/Delta);
+            double b = max(0.,(dist_eps[1,0] - dist_eps[]    )/Delta);
+            delt   += max(pow(a,2.),pow(b,2.));
+           }
+           delt = sign2(dist0[])*(sqrt(delt) - 1.);
+        }
+        dist[] -= xCFL*dt*delt;
+        if(fabs(delt)>=res) res = fabs(delt);
+    }
+    
+    boundary({dist});
+    restriction({dist});
+  // if((i%10 == 0) & (i<it_max)) 
+  //   fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e 
+  //   %6.2e %f %f\n",i, sum, res,eps, xCFL,dt, NB);
+
+    if(res<eps){
+      // fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e %6.2e %f %f\n",i, sum, res,
+        // eps, xCFL,dt, NB);
+      break;
+    }
+    // if(i==it_max)fprintf(stderr,"# REINIT NOT CONVERGED %d %6.2e %6.2e \n", sum,
+    //   res,eps);
+  }
+}
+
+
 
 int main(){
 	int N = 1 << MAXLEVEL;
 	init_grid(N);
-	nb_cell_NB = 1 << 2 ;
+	nb_cell_NB = 1 << 3 ;
+	NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
 
   foreach_vertex() {
-    dist[] = -geometry(x,y,L0/4.);
+    dist[] = -geometry(x,y,L0/5.);
   }
+  int iloop;
+  for(iloop=1; iloop<=9000;iloop++){
+
+  fprintf(stderr, "%d\n", iloop);
+
   boundary ({dist});
   restriction({dist});
   fractions (dist, cs, fs);
 
   boundary({cs,fs});
   restriction({cs,fs});
+
+  
 
   /**
   We set the initial velocity phase change field : 
@@ -81,9 +193,11 @@ int main(){
 
   foreach(){
     if(cs[] != 0. && cs[] != 1.){
-      double theta = atan2 (y, x);
-      v_pc.x[] = cos(2.*theta);
-      v_pc.y[] = sin(2.*theta);
+      double theta = atan2 (y-L0/2., x-L0/2.);
+      // v_pc.x[] = 0.01;
+      v_pc.x[] = 0.9*L0/(1<< MAXLEVEL)*cos(2.*theta);
+      // v_pc.y[] = 0.;
+      v_pc.y[] = 0.9*L0/(1<< MAXLEVEL)*sin(4.*theta);
      }
      else{
       v_pc.x[] = 0.;
@@ -110,6 +224,8 @@ First part : calculate
 $$ 
 S(\phi) \frac{\nabla \phi}{|\nabla \phi|}
 $$
+
+using a centered approximation
 */
   
   foreach(){
@@ -127,92 +243,62 @@ $$
     foreach_dimension(){
       n_dist.x[] = grad_dist.x[]/sqrt(sum)*sign2(dist[]);
     }
-
-
-
   }
   boundary((scalar *) {n_dist});
-
 
 /**
 Second part do the advection a few times to extend the velocity from the 
 surface along the normal to the surface. 
 */ 
-  scalar * components;
-
-  components = {v_pc.x,v_pc.y};
 
   dt = L0/(1 << MAXLEVEL);
   int ii;
-  for (ii=1; ii<=1; ii++){
-    for (scalar f in components){
+  for (ii=1; ii<=nb_cell_NB; ii++){
+    for (scalar f in velocity){
+    	scalar f2[];
+    	foreach(){
+    		f2[] = f[];
+    	}
+    	boundary({f2});
+    	restriction({f2});
+
       foreach(){
         foreach_dimension(){
-          f[] -= dt *(max(n_dist.x[],0.)*(dist[   ]-dist[-1,0])/Delta
-                     +min(n_dist.x[],0.)*(dist[1,0]-dist[    ])/Delta);
+        	if(cs[] ==0. || cs[] == 1.){
+	          f[] -= dt *(max(n_dist.x[],0.)*(f2[   ]-f2[-1,0])/Delta
+	                     +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
+          }
         }
       }
       boundary({f});
+      restriction({f});
     }
   }
 
-  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  cells();
-  draw_vof("cs");
-  squares("v_pc.x", min =-1., max = 1.);
-  save ("vpcx.png");
-  clear();  
-  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-    bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  cells();
-  draw_vof("cs");
-  squares("v_pc.y", min =-1., max = 1.);
-  save ("vpcy.png");
+  if(iloop%40 ==0){
+	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
+	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+	  draw_vof("cs");
+	  squares("v_pc.x", min =-0.1, max = 0.1);
+	  save ("vpcx.mp4");
+	  clear();  
+	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
+	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+	  draw_vof("cs");
+	  squares("dist", min =-0.1, max = 0.1);
+	  save ("dist.mp4");
+  }
+
 
 /**
-	Here we tag the cells where we will reconstruct the speed away from the
-	interface
-*/
-  scalar x_tag[],x_tag1[];
+advection with the reconstructed speed
+*/   
+  advection(level_set, v_pc, L0 / (1 << MAXLEVEL));
 
-  foreach(){
-  	if(cs[] != 0. && cs[] != 1.){
-  			x_tag[]  = 1.;
-  			x_tag1[] = 1.;
-  	}
-  	else{
-  			x_tag[]  = 0.;
-  			x_tag1[] = 0.;
-  	}
-  }
-  boundary({x_tag,x_tag1});
-
-  int j;
-  for (j=1;j<=nb_cell_NB;j++){
-  		foreach(){
-  		if(x_tag[] == 1.){
-  			foreach_neighbor(1)
-  				x_tag1[] = 1.;
-  		}
-    }
-    boundary({x_tag1});
-
-    foreach(){
-    	x_tag[] = x_tag1[];
-    }
-    boundary({x_tag});
-
-  }
-  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-  	bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  cells();
-	draw_vof("cs");
-  squares("x_tag", min =0., max = 1.);
-  save ("x_tag.png");
-  dump();  
-
-
+  LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
+      1.4*nb_cell_NB);
+  
+	}
 }
 
 /**
