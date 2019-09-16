@@ -18,7 +18,8 @@ of function in my sandbox.
 
 
 scalar dist[];
-face vector v_pc[];
+vector v_pc[];
+face vector v_pc_f[];
 scalar * level_set = {dist};
 
 scalar * velocity = {v_pc.x,v_pc.y};
@@ -149,12 +150,12 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   //   %6.2e %f %f\n",i, sum, res,eps, xCFL,dt, NB);
 
     if(res<eps){
-      // fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e %6.2e %f %f\n",i, sum, res,
-        // eps, xCFL,dt, NB);
+      fprintf(stderr,"%d %6.2e %6.2e \n", 
+    	sum, res,eps);
       break;
     }
-    // if(i==it_max)fprintf(stderr,"# REINIT NOT CONVERGED %d %6.2e %6.2e \n", sum,
-    //   res,eps);
+    if(i==it_max)fprintf(stderr,"%d %6.2e %6.2e \n", 
+    	sum, res,eps);
   }
 }
 
@@ -168,12 +169,21 @@ int main(){
 
 
   foreach_vertex() {
-    dist[] = -geometry(x,y,L0/5.);
+    dist[] = clamp(-geometry(x,y,L0/5.),-1.5*NB_width,1.5*NB_width);
   }
   int iloop;
-  for(iloop=1; iloop<=2000;iloop++){
 
-  fprintf(stderr, "%d\n", iloop);
+
+  for(iloop=1; iloop<=1000*MAXLEVEL;iloop++){
+
+  fprintf(stderr, "# %d\n", iloop);
+
+  if(iloop%100 ==0){
+	 	foreach_vertex() {
+	    dist[] = clamp(dist[],-(nb_cell_NB+2) * L0 / (1 <<MAXLEVEL),
+	    	(nb_cell_NB+2) * L0 / (1 << MAXLEVEL));
+	  }	
+  }
 
   boundary ({dist});
   restriction({dist});
@@ -255,7 +265,7 @@ surface along the normal to the surface.
   dt = L0/(1 << MAXLEVEL);
 
   int ii;
-  for (ii=1; ii<=5*nb_cell_NB; ii++){
+  for (ii=1; ii<=10*nb_cell_NB; ii++){
     for (scalar f in velocity){
     	scalar f2[];
     	foreach(){
@@ -278,17 +288,33 @@ surface along the normal to the surface.
       restriction({f});
     }
   }
-  
+
+  foreach(){
+  	for(scalar f in velocity){
+  		f[] = f[]*exp(2.*((NB_width-fabs(dist[]))/NB_width-1.));
+  	}
+  }
+  boundary((scalar *){v_pc});
+  restriction((scalar *){v_pc});
 /**
 Advection with the reconstructed speed
 */   
+
+  foreach(){
+  	foreach_dimension()
+  		v_pc_f.x[] = 0.5*(v_pc.x[-1,0] + v_pc.x[]);
+  }
+  boundary((scalar * ){v_pc});
+  restriction((scalar *){v_pc});
+
   advection(level_set, v_pc, L0 / (1 << MAXLEVEL));
 
-  LS_reinit2(dist,0.8*L0/(1 << MAXLEVEL), 1.4*NB_width,
-      1.4*nb_cell_NB);
-  if(iloop%20 == 0){
-	  view (fov = 20.0645, quat = {0,0,0,1}, tx = -0.501847, ty = -0.497771, 
-	    bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
+  	(nb_cell_NB+4) * L0 / (1 <<MAXLEVEL), // n'a pas d'influence
+      15);
+  if( iloop%60==0){
+  	view (fov = 14.6629, quat = {0,0,0,1}, tx = -0.628336, ty = -0.470744, 
+  		bg = {1,1,1}, width = 600, height = 600, samples = 1);
 	  draw_vof("cs");
 	  squares("dist", min =-NB_width, max = NB_width);
 	  save ("dist.mp4");
@@ -305,7 +331,11 @@ Advection with the reconstructed speed
 		dump();
 }
 
+
+
 /**
+![Animation of the level set function](recons_speed/dist.mp4)(loop)
+
 ## References
 
 ~~~bib

@@ -22,7 +22,7 @@ extern double dt;
 The integration is performed using the Bell-Collela-Glaz scheme. */
 #include "bcg.h"
 #include "alex_functions.h"
-
+#include "embed.h"
 
 /**
 This function is to be used only with the embed boundary module. It relies on
@@ -145,68 +145,6 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   distance function, it only eases the reinit process of the level set.
 
   */
-  velocity_extension(v_pc,cs,dist,dt);
-}
-
-
-/**
-Hamilton-Jacobi-type equation derived from [Peng et al., 1999]
-(#peng_pde-based_1999) :
-
-$$
-\partial_t v_{pc]  + 
-S(\phi) \frac{\nabla \phi}{|\nabla \phi|}. \nabla v_pc 
-= 0
-$$
-*/
-
-void velocity_extension(face vector v_pc, scalar cs, scalar dist, double dt){
-
-  face vector uf_vpc[];
-  vector n_dist[];
-
-/**
-first part : calculate $ S(\phi) \frac{\nabla \phi}{|\nabla \phi|} $
-*/
-
-
-  foreach(){
-    double sum=0;
-    vector grad_dist;
-    foreach_dimension(){
-      grad_dist.x = (dist[1,0]-dist[-1,0])/(2*Delta)
-      sum += grad_dist.x[]*grad_dist.x[];
-    }
-    foreach_dimension(){
-      n_dist[] = grad_dist.x/sqrt(sum)*sign2(dist[]);
-    }
-
-
-
-  }
-
-scalar * components;
-
-components = {v_pc.x,v_pc.y};
-
-/**
-Second part do the advection a few times to extend the velocity from the 
-surface along the normal to the surface. 
-*/ 
-
-  int ii;
-  for (ii=1; ii<=nb_cell_NB; ii++){
-    for (scalar f in components){
-      foreach(){
-        foreach_dimension(){
-          f[] -= dt *(max(n_dist[],0.)*(dist[   ]-dist[-1,0])/Delta
-                     +min(n_dist[],0.)*(dist[1,0]-dist[    ])/Delta);
-        }
-      }
-
-    }
-  }
-
 }
 
 /**
