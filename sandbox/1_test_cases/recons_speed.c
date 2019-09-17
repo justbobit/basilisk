@@ -313,15 +313,25 @@ surface along the normal to the surface.
 /**
 Advection with the reconstructed speed
 */   
+	foreach_dimension(){
+    scalar dvpc[];
+    foreach(){
+      dvpc[] = dist[] >0. ? (v_pc.x[]-v_pc.x[-1,0])/Delta : 
+                (v_pc.x[1,0]-v_pc.x[])/Delta;
+    }
+    boundary({dvpc});
+    restriction({dvpc});
 
-  foreach(){
-  	foreach_dimension()
-  		v_pc_f.x[] = 0.5*(v_pc.x[-1,0] + v_pc.x[]);
+
+    foreach(){
+    		v_pc_f.x[] = 0.5*(v_pc.x[-1,0] + v_pc.x[] +(dvpc[-1,0]-dvpc[])*Delta/2.);
+    }
   }
-  boundary((scalar * ){v_pc});
-  restriction((scalar *){v_pc});
+  boundary((scalar * ){v_pc_f});
+  restriction((scalar *){v_pc_f});
 
-  advection(level_set, v_pc, L0 / (1 << MAXLEVEL));
+
+    advection(level_set, v_pc_f, L0 / (1 << MAXLEVEL));
 
   LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
   	(nb_cell_NB+4) * L0 / (1 <<MAXLEVEL), // n'a pas d'influence
