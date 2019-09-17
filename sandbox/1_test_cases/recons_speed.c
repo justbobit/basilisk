@@ -188,7 +188,7 @@ int main(){
   int iloop;
 
 
-  for(iloop=1; iloop<=1000*MAXLEVEL;iloop++){
+  for(iloop=1; iloop<=7500;iloop++){
 
   fprintf(stderr, "# %d\n", iloop);
 
@@ -279,7 +279,7 @@ surface along the normal to the surface.
   dt = L0/(1 << MAXLEVEL);
 
   int ii;
-  for (ii=1; ii<=10*nb_cell_NB; ii++){
+  for (ii=1; ii<=8*nb_cell_NB; ii++){
     for (scalar f in velocity){
     	scalar f2[];
     	foreach(){
@@ -334,9 +334,9 @@ Advection with the reconstructed speed
     advection(level_set, v_pc_f, L0 / (1 << MAXLEVEL));
 
   LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
-  	(nb_cell_NB+4) * L0 / (1 <<MAXLEVEL), // n'a pas d'influence
-      15);
-  if( iloop%60==0){
+  	1.2*NB_width, // n'a pas d'influence
+    4);
+  if( iloop%50==0){
   	view (fov = 14.6629, quat = {0,0,0,1}, tx = -0.628336, ty = -0.470744, 
   		bg = {1,1,1}, width = 600, height = 600, samples = 1);
 	  draw_vof("cs");
