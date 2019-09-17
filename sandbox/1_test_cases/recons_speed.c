@@ -163,11 +163,13 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
 
     if(res<eps){
       fprintf(stderr,"%d %6.2e %6.2e \n", 
-    	sum, res,eps);
+    	xCFL,sum, res,eps);
+      if(res>10.) exit(1);
       break;
     }
     if(i==it_max)fprintf(stderr,"%d %6.2e %6.2e \n", 
-    	sum, res,eps);
+    	xCFL,sum, res,eps);
+      if(res>10.) exit(1);
   }
 }
 
