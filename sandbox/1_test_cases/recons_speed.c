@@ -305,7 +305,7 @@ surface along the normal to the surface.
 
   foreach(){
   	for(scalar f in velocity){
-  		f[] = f[]*exp(2.*((NB_width-fabs(dist[]))/NB_width-1.));
+  		f[] = f[]*exp(2.*((2.*NB_width-fabs(dist[]))/(2.*NB_width)-1.));
   	}
   }
   boundary((scalar *){v_pc});
