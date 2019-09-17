@@ -60,9 +60,14 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   vector gr_LS[];
   int i ;
   double eps = dt/100., eps2 = eps/2.;
-  scalar dist0[], dist_eps[];
-  foreach()
+  scalar dist0[], d2[], dist_eps[];
+  foreach(){
     dist0[] = dist[] ;
+    foreach_dimension(){
+      d2[] = min(fabs(dist[]),min(fabs(dist[-1,0]),fabs(dist[1,0])));
+    }
+    d2[] = min(d2[], min(fabs(dist[1,1]),dist[-1,-1]));
+  }
   boundary({dist0});
 
   for (i = 1; i<=it_max ; i++){
@@ -101,6 +106,7 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
         }
     }
     foreach(reduction(max:res)){
+      if(d2[]< NB){
       double delt =0.;
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
@@ -139,8 +145,14 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
            }
            delt = sign2(dist0[])*(sqrt(delt) - 1.);
         }
-        dist[] -= xCFL*dt*delt;
+        if(fabs(dist0[])>0.3*NB_width){
+          dist[] -= 0.5*dt*delt;
+        }
+        else{
+          dist[] -= xCFL*dt*delt;
+        }
         if(fabs(delt)>=res) res = fabs(delt);
+        }
     }
     
     boundary({dist});
