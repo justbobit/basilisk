@@ -10,9 +10,10 @@ of function in my sandbox.
 #include "run.h"
 #include "timestep.h"
 #include "bcg.h"
+#include "fractions.h"
+#include "curvature.h"
 
 #include "embed.h"
-#include "basic_geom.h"
 #include "view.h"
 #define MAXLEVEL 7
 
@@ -28,27 +29,21 @@ int nb_cell_NB;
 double  NB_width ;              // length of the NB
 
 /**
-The initial interface defined by the level set function is a circle.
+The initial interface defined by the level set function is a circle + a cosine
+function.
 */
 
 double geometry(double x, double y, double Radius) {
 
-  coord center_circle, center_rectangle, size_rectangle;
-  center_circle.x = 0.5;
-  center_circle.y = 0.5;
+  coord center;
+  center.x = 0.5;
+  center.y = 0.5;
 
-  center_rectangle.x = -0.0;
-  center_rectangle.y =  -0.5;
+  double theta = atan2 (y-center.y, x-center.x);
+  double R2  =  sq(x - center.x) + sq (y - center.y) ;
+  double s = -( sqrt(R2*(1.+0.25*cos(8*theta))) - Radius);
 
-  size_rectangle.x = 0.51;
-  size_rectangle.y = 1.21; 
-
-  double s = circle (x, y, center_circle, Radius);
-
-  double zalesak = -s;
-  // double zalesak = y-0.45;
-
-  return zalesak;
+  return s;
 }
 
 double sign2 (double x)
@@ -157,20 +152,27 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
     
     boundary({dist});
     restriction({dist});
-  // if((i%10 == 0) & (i<it_max)) 
-  //   fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e 
-  //   %6.2e %f %f\n",i, sum, res,eps, xCFL,dt, NB);
 
     if(res<eps){
-      fprintf(stderr,"%d %6.2e %6.2e \n", 
-    	xCFL,sum, res,eps);
+      // fprintf(stderr,"%g %g\n", xCFL, res);
       if(res>10.) exit(1);
       break;
     }
-    if(i==it_max)fprintf(stderr,"%d %6.2e %6.2e \n", 
-    	xCFL,sum, res,eps);
+    // if(i==it_max)fprintf(stderr,"%g %g \n", xCFL, res);
       if(res>10.) exit(1);
   }
+}
+
+coord normal (Point point, scalar c)
+{
+  coord n = mycs (point, c);
+  double nn = 0.;
+  foreach_dimension()
+    nn += sq(n.x);
+  nn = sqrt(nn);
+  foreach_dimension()
+    n.x /= nn;
+  return n;
 }
 
 
@@ -178,7 +180,7 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
 int main(){
 	int N = 1 << MAXLEVEL;
 	init_grid(N);
-	nb_cell_NB = 1 << 3 ;
+	nb_cell_NB = 6 ;
 	NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
 
@@ -187,8 +189,7 @@ int main(){
   }
   int iloop;
 
-
-  for(iloop=1; iloop<=7500;iloop++){
+  for(iloop=1; iloop<=2000;iloop++){
 
   fprintf(stderr, "# %d\n", iloop);
 
@@ -206,29 +207,39 @@ int main(){
   boundary({cs,fs});
   restriction({cs,fs});
 
+  scalar curve[];
+  curvature (cs,curve);
+  boundary({curve});
+
+
+  stats s = statsf(curve);
+  fprintf(stderr, "%d %g %g\n", iloop, s.min, s.max);
   
 
   /**
-  We set the initial velocity phase change field : 
+  We set the velocity phase change field to be dependant on the curvature : 
   $$
-  v_{pc} =  { cos(2\theta), sin(2\theta)}
+  v_{pc} =  \{ -7 -\kappa * n_x, -7 -\kappa * n_y \}
   $$
+  therefore the equilibrium will be reached once we reach a circle whose
+  curvature is -7.
    */
 
+  double maxk = max(fabs(s.min), fabs(s.max));
   foreach(){
     if(cs[] != 0. && cs[] != 1.){
-      double theta = atan2 (y-L0/2., x-L0/2.);
-      // v_pc.x[] = 0.01;
-      // v_pc.x[] = 0.7*L0/(1<< MAXLEVEL)+0.7*L0/(1<< MAXLEVEL)*cos(2.*theta);
-      v_pc.x[] = 0.4*L0/(1<< MAXLEVEL);
-      v_pc.y[] = 0.;
-      // v_pc.y[] = 0.7*L0/(1<< MAXLEVEL)*sin(4.*theta);
+
+      coord n = normal (point, cs);
+      v_pc.x[] = (-7 -curve[])/maxk*n.x*L0/(1 << MAXLEVEL);
+      v_pc.y[] = (-7 -curve[])/maxk*n.y*L0/(1 << MAXLEVEL);
      }
      else{
       v_pc.x[] = 0.;
       v_pc.y[] = 0.;
     }
   }
+
+  
   
   boundary((scalar*){v_pc});
 
@@ -271,6 +282,15 @@ using a centered approximation
   }
   boundary((scalar *) {n_dist});
 
+
+  // view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
+  //     bg = {1,1,1}, width = 600, height = 600, samples = 1);
+  //   draw_vof("cs");
+  //   squares("n_dist.x");
+  //   save ("grad_distx.png");
+  //   squares("n_dist.y");
+  //   save ("grad_disty.png");
+
 /**
 Second part do the advection a few times to extend the velocity from the 
 surface along the normal to the surface. 
@@ -279,7 +299,7 @@ surface along the normal to the surface.
   dt = L0/(1 << MAXLEVEL);
 
   int ii;
-  for (ii=1; ii<=8*nb_cell_NB; ii++){
+  for (ii=1; ii<=4*nb_cell_NB; ii++){
     for (scalar f in velocity){
     	scalar f2[];
     	foreach(){
@@ -303,13 +323,7 @@ surface along the normal to the surface.
     }
   }
 
-  foreach(){
-  	for(scalar f in velocity){
-  		f[] = f[]*exp(2.*((2.*NB_width-fabs(dist[]))/(2.*NB_width)-1.));
-  	}
-  }
-  boundary((scalar *){v_pc});
-  restriction((scalar *){v_pc});
+
 /**
 Advection with the reconstructed speed
 */   
@@ -324,7 +338,8 @@ Advection with the reconstructed speed
 
 
     foreach(){
-    		v_pc_f.x[] = 0.5*(v_pc.x[-1,0] + v_pc.x[] +(dvpc[-1,0]-dvpc[])*Delta/2.);
+        v_pc_f.x[] = 0.5*(v_pc.x[-1,0] + v_pc.x[] +
+          (dvpc[-1,0]-dvpc[])*Delta/2.);
     }
   }
   boundary((scalar * ){v_pc_f});
@@ -336,8 +351,8 @@ Advection with the reconstructed speed
   LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
   	1.2*NB_width, // n'a pas d'influence
     4);
-  if( iloop%50==0){
-  	view (fov = 14.6629, quat = {0,0,0,1}, tx = -0.628336, ty = -0.470744, 
+  if( iloop%30==0){
+  	view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
   		bg = {1,1,1}, width = 600, height = 600, samples = 1);
 	  draw_vof("cs");
 	  squares("dist", min =-NB_width, max = NB_width);
@@ -359,6 +374,15 @@ Advection with the reconstructed speed
 
 /**
 ![Animation of the level set function](recons_speed/dist.mp4)(loop)
+
+![Animation of the level set function](recons_speed/vpcx.mp4)(loop)
+
+~~~gnuplot Curvature evolution
+set title 'Curvature' font 'Helvetica,20'
+set key left
+plot 'log' u 1:2 w l t 'min',  \
+     'log' u 1:3 w l  t 'max'
+~~~
 
 ## References
 
