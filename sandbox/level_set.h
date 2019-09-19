@@ -35,7 +35,7 @@ of v_pc which is the phase change velocity using the Stefan relation.
 */
 
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
- scalar tr2, face vector v_pc, scalar dist, double L_H, 
+ scalar tr2, vector v_pc, scalar dist, double L_H, 
  double NB_width, int nb_cell_NB, double lambda[2]) {
 
   scalar T_eq[];
@@ -64,7 +64,6 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   boundary({T_eq});
   restriction({T_eq});
 
-  
  /**
   The phase change velocity $\mathbf{v}_{pc}$ is
 
@@ -86,8 +85,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
         line_length_center (n, alpha, &p);
-        double c=0.;
-        double temp = 0.;
+        double c    = 0.;
+        double temp = T_eq[];
         // foreach_dimension(){
         //   temp += v_pc.x[]*v_pc.x[];
         // }
@@ -147,10 +146,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 
   /**
   With the the normal vector and the gradients of the tracers we can now 
-  compute the phase change velocity $\mathbf{v}_{pc}$, following the lines
-  drawn in [meanflow.c](/sandbox/popinet/meanflow.c). We define it as the
-  product between the density ratio and the diffusive flow. Note that $\mathbf
-  {v}_{pc}$ is weighted by the face metric. */
+  compute the phase change velocity $\mathbf{v}_{pc}$. */
   
   face vector v_pc2[];
   foreach_face() {
@@ -171,11 +167,6 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   boundary((scalar *){v_pc});
   boundary((scalar *){v_pc2});
 
-  /** We now propagate the velocity obtained in the interfacial cells away from
-  the interface. The level set function obtained after propagation is not a
-  distance function, it only eases the reinit process of the level set.
-
-  */
 }
 
 /**
