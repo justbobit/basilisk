@@ -420,7 +420,7 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
 
 
 void recons_speed(scalar dist, double dt, int nb_cell_NB,
-                  double NB, scalar * velocity){
+                  double NB, scalar * LS_speed){
 /**
 The phase change field is only defined in interfacial cells, it must now be
 reconstructed on the cells in the direct vicinity. We use here the method
@@ -465,10 +465,9 @@ Second part do the advection a few times to extend the velocity from the
 surface along the normal to the surface. 
 */ 
 
-
   int ii;
   for (ii=1; ii<=5*nb_cell_NB; ii++){
-    for (scalar f in velocity){
+    for (scalar f in LS_speed){
       scalar f2[];
       foreach(){
         f2[] = f[];
