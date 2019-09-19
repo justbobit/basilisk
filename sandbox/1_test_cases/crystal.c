@@ -8,6 +8,7 @@
 #include "diffusion.h"
 
 #include "fractions.h"
+#include "curvature.h"
 
 #include "../level_set.h"
 #include "view.h"
@@ -15,6 +16,7 @@
 #define T_eq         0.
 #define TL_inf       -1.
 #define TS_inf       -1.
+
 /**
 Setup of the numerical parameters
 */
@@ -35,18 +37,21 @@ mgstats mgT;
 scalar grad1[], grad2[];
                                     
 
-double 	latent_heat = 1000.;
+double 	latent_heat = 10000.;
 double 	lambda[2]; 		// thermal capacity of each material
+double 	epsK = 0.0005, epsV = 0.0005;
 int 		nb_cell_NB;
 double  NB_width ;    // length of the NB
 
-TL[embed]  = dirichlet(T_eq);
+scalar curve[];
+
+TL[embed]  = dirichlet(T_eq -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TL[top]    = dirichlet(TL_inf); 
 TL[bottom] = dirichlet(TL_inf); 
 TL[left]   = dirichlet(TL_inf); 
 TL[right]  = dirichlet(TL_inf); 
 
-TS[embed]  = dirichlet(T_eq);
+TS[embed]  = dirichlet(T_eq -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TS[top]    = dirichlet(TS_inf); 
 TS[bottom] = dirichlet(TS_inf); 
 TS[left]   = dirichlet(TS_inf); 
@@ -121,11 +126,6 @@ event init(t=0){
     dist[] = clamp(-geometry(x,y,L0/5.),-1.5*NB_width,1.5*NB_width);
   }
 
-    LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
-  	1.5*NB_width,
-    4);
-
-
   boundary ({dist});
   restriction({dist});
 
@@ -133,17 +133,20 @@ event init(t=0){
   boundary({cs,fs});
   restriction({cs,fs});
 
-  foreach() {
-    TL[] = -1;
-    TS[] = -1.;
-  }
 
   foreach_face(){
     v_pc.x[] = 0.;
   }
+  boundary((scalar *){v_pc});
 
+  curvature(cs,curve);
+  boundary({curve});
+
+  foreach() {
+    TL[] = -1;
+    TS[] = -1.;
+  }
   boundary({TL,TS});
-
   restriction({TL,TS});
 
   scalar visu[];
@@ -152,13 +155,7 @@ event init(t=0){
   }
   boundary({visu});
 
-	view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
-		bg = {1,1,1}, width = 600, height = 600, samples = 1);
-  draw_vof("cs");
-  squares("visu", min =-1., max = 1.);
-  save ("visu0.png");
   
-  boundary((scalar *){v_pc});
 }
 
 event properties(i++){
@@ -199,7 +196,7 @@ event LS_advection(i++,last){
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
       nb_cell_NB,lambda);
 
-	  recons_speed(dist, dt, nb_cell_NB, NB_width, LS_speed);
+	  recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
 
     dt = timestep_LS (v_pc, DT);
 
@@ -220,6 +217,9 @@ event LS_advection(i++,last){
     fractions (dist, cs, fs);
     boundary({cs,fs});
     restriction({cs,fs});
+
+	  curvature(cs,curve);
+	  boundary({curve});
 
     foreach(){
       cs[]      = 1.-cs[];
@@ -242,7 +242,7 @@ event LS_advection(i++,last){
 
 event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
-    LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
+    LS_reinit2(dist,0.5*L0/(1 << MAXLEVEL), 
   	1.2*NB_width,
     4);
   }
@@ -277,8 +277,8 @@ event movies ( i++,last;i<1000)
     boundary({visu});
     
     draw_vof("cs");
-    squares("dist", min =-NB_width, max = NB_width);
-    save ("dist.mp4");
+    squares("visu", min =-0.2, max = 0.2);
+    save ("visu.mp4");
     
     boundary((scalar *){v_pc});
 

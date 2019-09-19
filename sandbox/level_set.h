@@ -41,8 +41,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   scalar T_eq[];
 
 #if Gibbs_Thomson
-  double epsK = 0.005;
-  double epsV = 0.005;
+  double epsK = 0.0005;
+  double epsV = 0.0005;
   scalar curve[];
   curvature (cs,curve);
   boundary({curve});
@@ -52,7 +52,8 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 */
 
   foreach(){
-    T_eq[] = -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
+    T_eq[] = -epsK*curve[] // here we suppose that Tm = 0
+             -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
   }
 
 #else
@@ -457,7 +458,7 @@ surface along the normal to the surface.
 */ 
 
   int ii;
-  for (ii=1; ii<=5*nb_cell_NB; ii++){
+  for (ii=1; ii<=10*nb_cell_NB; ii++){
     for (scalar f in LS_speed){
       scalar f2[];
       foreach(){
