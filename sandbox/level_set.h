@@ -24,6 +24,10 @@ The integration is performed using the Bell-Collela-Glaz scheme. */
 #include "alex_functions.h"
 #include "embed.h"
 
+
+#if Gibbs_Thomson
+#include "curvature.h"
+#endif
 /**
 This function is to be used only with the embed boundary module. It relies on
 the calculation of gradients on both side of a boundary and modifies the value
@@ -33,6 +37,33 @@ of v_pc which is the phase change velocity using the Stefan relation.
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
  scalar tr2, face vector v_pc, scalar dist, double L_H, 
  double NB_width, int nb_cell_NB, double lambda[2]) {
+
+  scalar T_eq[];
+
+#if Gibbs_Thomson
+  double epsK = 0.005;
+  double epsV = 0.005;
+  scalar curve[];
+  curvature (cs,curve);
+  boundary({curve});
+
+/**
+
+*/
+
+  foreach(){
+    T_eq[] = -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
+  }
+
+#else
+  foreach(){
+    T_eq[] = 0;
+  }
+#endif
+
+  boundary({T_eq});
+  restriction({T_eq});
+
   
  /**
   The phase change velocity $\mathbf{v}_{pc}$ is
