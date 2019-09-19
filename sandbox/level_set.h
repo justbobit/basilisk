@@ -279,9 +279,14 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   vector gr_LS[];
   int i ;
   double eps = dt/100., eps2 = eps/2.;
-  scalar dist0[], dist_eps[];
-  foreach()
+  scalar dist0[], d2[], dist_eps[];
+  foreach(){
     dist0[] = dist[] ;
+    foreach_dimension(){
+      d2[] = min(fabs(dist[]),min(fabs(dist[-1,0]),fabs(dist[1,0])));
+    }
+    d2[] = min(d2[], min(fabs(dist[1,1]),dist[-1,-1]));
+  }
   boundary({dist0});
 
   for (i = 1; i<=it_max ; i++){
@@ -320,6 +325,7 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
         }
     }
     foreach(reduction(max:res)){
+      if(d2[]< NB){
       double delt =0.;
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
@@ -358,25 +364,103 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
            }
            delt = sign2(dist0[])*(sqrt(delt) - 1.);
         }
-        dist[] -= xCFL*dt*delt;
+        if(fabs(dist0[])>0.3*NB){
+          dist[] -= 0.5*dt*delt;
+        }
+        else{
+          dist[] -= xCFL*dt*delt;
+        }
         if(fabs(delt)>=res) res = fabs(delt);
+        }
     }
     
     boundary({dist});
     restriction({dist});
-  // if((i%10 == 0) & (i<it_max)) 
-  //   fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e 
-  //   %6.2e %f %f\n",i, sum, res,eps, xCFL,dt, NB);
 
     if(res<eps){
-      // fprintf(stderr,"# REINIT_LS %d %d %6.2e %6.2e %6.2e %f %f\n",i, sum, res,
-        // eps, xCFL,dt, NB);
+      // fprintf(stderr,"%g %g\n", xCFL, res);
+      if(res>10.) exit(1);
       break;
     }
-    // if(i==it_max)fprintf(stderr,"# REINIT NOT CONVERGED %d %6.2e %6.2e \n", sum,
-    //   res,eps);
+    // if(i==it_max)fprintf(stderr,"%g %g \n", xCFL, res);
+      if(res>10.) exit(1);
   }
 }
+
+
+void recons_speed(scalar dist, double dt, int nb_cell_NB,
+                  double NB, scalar * velocity){
+/**
+The phase change field is only defined in interfacial cells, it must now be
+reconstructed on the cells in the direct vicinity. We use here the method
+described by [Peng et al., 1999](#peng_pde-based_1999) by solving the following
+equation:
+
+$$
+\partial_t v_{pc}  + S(\phi) \frac{\nabla \phi}{|\nabla \phi|}. \nabla v_{pc}= 0
+$$
+
+First part : calculate 
+$$ 
+S(\phi) \frac{\nabla \phi}{|\nabla \phi|}
+$$
+
+using a centered approximation
+*/
+
+  vector n_dist[], grad_dist[];
+ 
+  foreach(){
+
+    double sum=1e-15;
+    foreach_dimension(){
+      grad_dist.x[] = min(dist[1,0]-dist[],
+            min(dist[]-dist[-1,0],(dist[1,0]-dist[-1,0])/2))/Delta;
+      sum += grad_dist.x[]*grad_dist.x[];
+
+    }
+    if(sum==0.){
+        fprintf(stderr, "%g %g %g %g %g %g\n", dist[1,0], dist[-1,0], 
+          dist[0,1], dist[0,-1], x , y);
+      }
+    foreach_dimension(){
+      n_dist.x[] = grad_dist.x[]/sqrt(sum)*sign2(dist[]);
+    }
+  }
+  boundary((scalar *) {n_dist});
+
+/**
+Second part do the advection a few times to extend the velocity from the 
+surface along the normal to the surface. 
+*/ 
+
+
+  int ii;
+  for (ii=1; ii<=5*nb_cell_NB; ii++){
+    for (scalar f in velocity){
+      scalar f2[];
+      foreach(){
+        f2[] = f[];
+      }
+      boundary({f2});
+      restriction({f2});
+
+      foreach(){
+        if(fabs(dist[])<0.9*NB){
+          foreach_dimension(){
+            if(cs[] ==0. || cs[] == 1.){
+              f[] -= dt *(max(n_dist.x[],0.)*(f2[   ]-f2[-1,0])/Delta
+                         +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
+            }
+          }
+        }
+      }
+      boundary({f});
+      restriction({f});
+    }
+  }
+}
+
 /**
 ## References
 
