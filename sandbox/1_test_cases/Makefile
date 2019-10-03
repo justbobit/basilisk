@@ -2,6 +2,8 @@ CFLAGS +=  -O2
 
 include $(BASILISK)/Makefile.defs
 
+crystal.tst  						: CFLAGS += -fopenmp
+
 dirichlet.tst 						: CFLAGS += -DDIRICHLET=1 -DMTRACE=3
 	
 dirichlet.c                         : neumann_double.c

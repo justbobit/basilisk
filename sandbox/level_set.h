@@ -25,9 +25,7 @@ The integration is performed using the Bell-Collela-Glaz scheme. */
 #include "embed.h"
 
 
-#if Gibbs_Thomson
 #include "curvature.h"
-#endif
 /**
 This function is to be used only with the embed boundary module. It relies on
 the calculation of gradients on both side of a boundary and modifies the value
@@ -36,13 +34,12 @@ of v_pc which is the phase change velocity using the Stefan relation.
 
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
  scalar tr2, vector v_pc, scalar dist, double L_H, 
- double NB_width, int nb_cell_NB, double lambda[2]) {
+ double NB_width, int nb_cell_NB, double lambda[2],
+ double epsK, double epsV) {
 
   scalar T_eq[];
 
 #if Gibbs_Thomson
-  double epsK = 0.0005;
-  double epsV = 0.0005;
   scalar curve[];
   curvature (cs,curve);
   boundary({curve});
@@ -52,7 +49,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 */
 
   foreach(){
-    T_eq[] = -epsK*curve[] // here we suppose that Tm = 0
+    T_eq[] = epsK*curve[] // here we suppose that Tm = 0
              -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
   }
 
@@ -75,13 +72,14 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   here we use the embed_gradient_face_x defined in embed that gives a proper
   definition of the gradients with embedded boundaries. */
   vector gtr[], gtr2[];
+  boundary({tr});
+
   foreach(){
     foreach_dimension(){
       gtr.x[] = 0.;
     }
     if(fabs(dist[])<NB_width){
-      if ( ( (fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.)   ) 
-              && fabs(dist[])<=0.9*NB_width){
+      if(interfacial(point, cs)){
         coord n       = facet_normal( point, cs ,fs) , p;
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
@@ -110,19 +108,21 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 
   boundary({cs,fs});
   restriction({cs,fs});
+
+  boundary({tr2});
   
   foreach(){
     foreach_dimension(){
       gtr2.x[] = 0.;
     }
-    if(fabs(dist[])< 0.9*NB_width){
-      if(((fs.x[] !=0. && fs.x[] != 1.) || (fs.y[] !=0. && fs.y[] != 1.))){
+    if(fabs(dist[])< NB_width){
+      if(interfacial(point, cs)){
         coord n       = facet_normal( point, cs ,fs) , p;
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
         line_length_center (n, alpha, &p);
         double c=0.;
-        double temp = 0.;
+        double temp = T_eq[];
         // foreach_dimension(){
         //   temp += v_pc.x[]*v_pc.x[];
         // }
@@ -149,25 +149,15 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   With the the normal vector and the gradients of the tracers we can now 
   compute the phase change velocity $\mathbf{v}_{pc}$. */
   
-  face vector v_pc2[];
-  foreach_face() {
-
+  foreach_face()
     v_pc.x[]  = 0.;
-    v_pc2.x[] = 0.;
-  }
-
 
   foreach_face(){
-    if ( (  fs.y[] !=0. && fs.y[] != 1.   ) 
-              && fabs(dist[])<=0.9*NB_width){
+    if(interfacial(point, cs)){
       v_pc.x[]     =  (lambda[1]*gtr2.x[] - lambda[0]*gtr.x[])/L_H;
-      v_pc2.x[]    = v_pc.x[];
     }
   }
-
   boundary((scalar *){v_pc});
-  boundary((scalar *){v_pc2});
-
 }
 
 /**
@@ -401,12 +391,14 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
     restriction({dist});
 
     if(res<eps){
-      // fprintf(stderr,"%g %g\n", xCFL, res);
-      if(res>10.) exit(1);
       break;
     }
-    // if(i==it_max)fprintf(stderr,"%g %g \n", xCFL, res);
-      if(res>10.) exit(1);
+    if(i==it_max){
+      if(res>10.){
+        fprintf(stderr,"BAD LS_REINIT %g %g \n", xCFL, res);
+        exit(1);
+      } 
+    }
   }
 }
 
@@ -442,10 +434,6 @@ using a centered approximation
       sum += grad_dist.x[]*grad_dist.x[];
 
     }
-    if(sum==0.){
-        fprintf(stderr, "%g %g %g %g %g %g\n", dist[1,0], dist[-1,0], 
-          dist[0,1], dist[0,-1], x , y);
-      }
     foreach_dimension(){
       n_dist.x[] = grad_dist.x[]/sqrt(sum)*sign2(dist[]);
     }

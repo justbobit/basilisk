@@ -24,16 +24,17 @@ The full algorithm is done on two iterations. It is the following :
 
 ![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
 
+![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/v_pcy.mp4)(loop)
+
 
 
 ~~~gnuplot Phase change velocity
-set term pngcairo size 800,800
 f(x)  = a  - x/b
-f2(x) = a2 - x/b2  
-f3(x) = a3 - x/b3  
-fit f(x)  'log1' u ($1):(log($7)) via a ,b
-fit f2(x) 'log2' u ($1):(log($7)) via a2,b2
-fit f3(x) 'log3' u ($1):(log($7)) via a3,b3
+f2(x)  = a  + x/b
+fit f(x)  'log' u ($1):(log($7)) via a ,b
+fit f2(x)  'log' u ($1):(log($6)) via a ,b
+
+
 ftitle(a,b) = sprintf("%.3fexp^{t/{%4.4f}}",a,b)
 latent(a) = sprintf("L_H  %4.4f",a)
 set grid
@@ -41,35 +42,26 @@ set xlabel "time"
 set ylabel "log(v_{pc})"
 #set logscale y
 aa = 100.
-#plot 'log1' u 1:(log($7)) w l  t latent(aa/1), \
-#      f(x) w l lw 3 t ftitle(a,b)
-plot 'log1' u 1:(log($7)) w l  t latent(aa/1),\
-         f(x) w l dt 2 t ftitle(a,b), \
-    'log2' u 1:(log($7)) w l pointtype 2  t latent(aa/2), \
-        f2(x) dt 2 t ftitle(a2,b2), \
-    'log3'  u 1:(log($7)) w l pointtype 2 lc rgb "blue" t latent(aa/3), \
-        f3(x) dt 2 t ftitle(a3,b3)
+plot 'log' u 1:(log($7)) w l  t latent(aa/1), \
+      f(x) w l lw 3 t ftitle(a,b), \
+      f2(x) w l lw 3 t ftitle(a,b)
 ~~~
-
-~~~gnuplot Temperature in the cell located at 
-set title 'Temperature in one cell' font 'Helvetica,20'
-set key left
-plot 'log1' u 1:2 w l t 'Liquid Temperature',  \
-     'log1' u 1:4 w l  t 'Solid Temperature',  \
-     'log1' u 1:5 w l lw 2 dt 2 lt 8 t 'Approximated Temperature'
-~~~
-
 
 */
 
 #define DOUBLE_EMBED 1
 #define LevelSet     1
+#define Gibbs_Thomson 1
 
 #include "embed.h"
 #include "advection.h"
 #include "diffusion.h"
-#include "../level_set.h"
+
+#include "fractions.h"
+#include "curvature.h"
+
 #include "view.h"
+#include "../level_set.h"
 
 #define T_eq         0.
 #define TL_inf       1.
@@ -84,15 +76,31 @@ FILE * fp1;
 #define DT_MAX  1.
 
 #define T_eq         0.
-#define plane(x, y, H) (y - H)
+
+
+#define plane(x, y, H) (y - exp(-8.*(x)*(x))/L0 - H)
+// #define plane(x, y, H) (y - H)
+
 
 scalar TL[], TS[], dist[];
 scalar * tracers = {TL, TS};
 scalar * level_set = {dist};
-face vector v_pc[];
+
+vector v_pc[];
+scalar * LS_speed   = {v_pc.x,v_pc.y};
 face vector muv[];
 mgstats mgT;
 scalar grad1[], grad2[];
+
+#if Gibbs_Thomson
+double  epsK = 0.001, epsV = 0.001;
+#else
+double  epsK = 0.000, epsV = 0.000;
+#endif
+// double  epsK = 0., epsV = 0.;
+scalar curve[];
+
+
 
 double lambda[2];
 
@@ -101,15 +109,33 @@ double  NB_width ;              // length of the NB
   
 mgstats mg1,mg2;
 
-TL[embed]  = dirichlet(T_eq);
+TL[embed] = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TL[top]    = dirichlet(TL_inf); 
 
-TS[embed]  = dirichlet(T_eq);
+TS[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TS[bottom] = dirichlet(TS_inf); 
+
 int j;
 int k_loop = 0;
 /**
 The domain is 4 units long, centered vertically. */
+
+double timestep_LS (const face vector u, double dtmax)
+{
+  static double previous = 0.;
+  dtmax /= CFL;
+  foreach_face(reduction(min:dtmax))
+    if (u.x[] != 0.) {
+      double dt = Delta/fabs(u.x[]);
+      if (dt < dtmax) dtmax = dt;
+    }
+  dtmax *= CFL;
+  if (dtmax > previous)
+    dtmax = (previous + 0.1*dtmax)/1.1;
+  previous = dtmax;
+  return dtmax;
+}
+
 
 int main() {
   L0 = 4.;
@@ -117,17 +143,16 @@ int main() {
   origin (-L0/2., -L0/2.);
   
   j = 1;
-  for (j=1;j<=3;j++){
+  for (j=1;j<=1;j++){
 
 /**
 Here we set up the parameters of our simulation. The latent heat $L_H$, the
 initial position of the interface $h_0$ and the resolution of the grid.
 */
     latent_heat  = 100./j;
-    MAXLEVEL = MIN_LEVEL = 5;
+    MAXLEVEL = MIN_LEVEL = 7;
 
-    H0 = -0.3*L0; 
-    // H0 = -1.501*L0 / (1 << MAXLEVEL); 
+    H0 = -0.2*L0; 
     N = 1 << MAXLEVEL;
     snprintf(filename, 100,  "log%d", j);
     fp1 = fopen (filename,"w");
@@ -140,7 +165,7 @@ initial position of the interface $h_0$ and the resolution of the grid.
 
 event init(t=0){
 
-
+  TOLERANCE = 2.e-7;
   DT = L0/(1 << MAXLEVEL);
 
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
@@ -149,7 +174,7 @@ event init(t=0){
   lambda[1] = 1.;
 
   foreach(){
-      dist[] = plane(x,y,H0);
+      dist[] = clamp(plane(x,y,H0),-1.1*NB_width, 1.1*NB_width);
   }
   boundary ({dist});
   restriction({dist});
@@ -158,8 +183,19 @@ event init(t=0){
   boundary({cs,fs});
   restriction({cs,fs});
 
+  curvature(cs,curve);
+  boundary({curve});
+  stats s2    = statsf(curve);
+  view (fov = 10.4411, quat = {0,0,0,1}, tx = -0.223746, 
+      ty = -0.00297483, bg = {1,1,1}, width = 600, 
+      height = 600, samples = 1);
+    draw_vof("cs");
+    squares("curve", min =s2.min, max = s2.max);
+    save ("curve_init.png");
+    fprintf(stderr, "%g %g\n", s2.min, s2.max);
+
   foreach() {
-    TL[] = T_eq;
+    TL[] = TL_inf;
     TS[] = T_eq;
   }
 
@@ -169,13 +205,10 @@ event init(t=0){
 
   boundary({TL,TS});
   restriction({TL,TS});
-
- 
 }
 
 
 event properties(i++){
-  
 
   foreach_face()
     muv.x[] = lambda[i%2]*fs.x[];
@@ -184,7 +217,7 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   int kk;
-  for (kk=1;kk<=(40*k_loop+1);kk++){
+  for (kk=1;kk<=(10*k_loop+1);kk++){
     if(i%2==0){
       mg1 = diffusion(TL, L0/(1 << MAXLEVEL), D = muv);
     }
@@ -196,7 +229,7 @@ event tracer_diffusion(i++){
 
 
 event LS_advection(i++,last){
-  if(i%2 == 1){
+  if(i%2 == 1 && i> 100){
     double L_H       = latent_heat;  
 
     scalar cs0[];
@@ -214,7 +247,13 @@ event LS_advection(i++,last){
     restriction({cs,fs});
 
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
-      nb_cell_NB,lambda);
+      nb_cell_NB,lambda,epsK, epsV);
+
+    recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
+
+    dt = timestep_LS (v_pc, DT);
+    
+    boundary((scalar *){v_pc});
 
     advection_LS (level_set, v_pc, dt);
     boundary ({dist});
@@ -223,6 +262,11 @@ event LS_advection(i++,last){
     fractions (dist, cs, fs);
     boundary({cs,fs});
     restriction({cs,fs});
+
+    curvature(cs,curve);
+    boundary({curve});
+    stats s2    = statsf(curve);
+    fprintf(stderr, "%g %g\n", s2.min, s2.max);
 
     foreach(){
       cs[]      = 1.-cs[];
@@ -233,7 +277,6 @@ event LS_advection(i++,last){
 
     boundary({cs,fs});
     restriction({cs,fs});
-    // event ("properties");
 
     k_loop = 0;
     foreach(){
@@ -243,11 +286,10 @@ event LS_advection(i++,last){
 }
 
 
-
 event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
     LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
-      1.4*nb_cell_NB);
+      1);
   }
 }
 
@@ -267,10 +309,12 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<300.)
+event movies ( i++,last;t<100.)
 {
-  if(i%2 == 1 && t > 50) {
-    if(i%20==1 && j ==1){
+  if(i%20 == 1) {
+    stats s2    = statsf(curve);
+    stats s3    = statsf(v_pc.y);
+
     boundary({TL,TS});
     scalar visu[];
     foreach(){
@@ -278,23 +322,30 @@ event movies ( i++,last;t<300.)
     }
     boundary({visu});
     
-    draw_vof("cs");
-    squares("visu", min =-1., max = 1.);
-    save ("visu.mp4");
     
-    boundary((scalar *){v_pc});
-    }
+    view (fov = 10.4411, quat = {0,0,0,1}, tx = -0.223746, 
+      ty = -0.00297483, bg = {1,1,1}, width = 600, 
+      height = 600, samples = 1);
+    draw_vof("cs");
+    squares("curve", min =-5., max = 5.);
+    save ("visu.mp4");
 
-    stats s2    = statsf(v_pc.y);
+    boundary((scalar *){v_pc});
+    draw_vof("cs");
+    squares("v_pc.y", min =s3.min, max = s3.max);
+    save ("v_pcy.mp4");
+
+
     Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
 
     double cap  = capteur(p, TL);
     double cap3 = capteur(p, TS);
     double cap2 = capteur(p, cs);
     double T_point = cap2*cap + (1.-cap2)*cap3;
-    fprintf (fp1, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
       t, cap, cap2, cap3, T_point, s2.min, s2.max);
-    fprintf(fp1, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
+    fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
+
   }
 }
 
