@@ -52,13 +52,17 @@ double geometry(double x, double y, double Radius) {
 int main(){
 	int N = 1 << MAXLEVEL;
 	init_grid(N);
-	nb_cell_NB = 6 ;
+	nb_cell_NB = 1 << 3 ;
 	NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
 
   foreach_vertex() {
     dist[] = clamp(-geometry(x,y,L0/5.),-1.5*NB_width,1.5*NB_width);
   }
+  LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
+    1.2*NB_width,
+    10);
+
   int iloop;
 
   for(iloop=1; iloop<=5000;iloop++){
@@ -67,8 +71,7 @@ int main(){
 
   if(iloop%100 ==0){
 	 	foreach_vertex() {
-	    dist[] = clamp(dist[],-(nb_cell_NB+2) * L0 / (1 <<MAXLEVEL),
-	    	(nb_cell_NB+2) * L0 / (1 << MAXLEVEL));
+	    dist[] = clamp(dist[],-1.5*NB_width,1.5*NB_width);
 	  }	
   }
 
@@ -128,17 +131,21 @@ face-centered field, but my first tries were unsuccessful.
 */   
 
 
-  advection(level_set, v_pc, L0 / (1 << MAXLEVEL));
+  advection(level_set, v_pc, 0.8*L0 / (1 << MAXLEVEL));
 
-  LS_reinit2(dist,0.49*L0/(1 << MAXLEVEL), 
+  LS_reinit2(dist,L0/(1 << MAXLEVEL), 
   	1.2*NB_width,
-    4);
-  if( iloop%30==0){
+    1);
+  if( iloop%90==0){
   	view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
   		bg = {1,1,1}, width = 600, height = 600, samples = 1);
 	  draw_vof("cs");
-	  squares("dist", min =-NB_width, max = NB_width);
-	  save ("dist.mp4");
+	  squares("curve", min =-30, max = 30);
+	  save ("curve.mp4");
+
+    draw_vof("cs");
+    squares("dist", min =-NB_width, max = NB_width);
+    save ("dist.mp4");
   clear();  
 
 	  draw_vof("cs");
@@ -146,7 +153,7 @@ face-centered field, but my first tries were unsuccessful.
 	  	max = 0.2*L0/(1 << MAXLEVEL));
 	  save ("vpcx.mp4");
   }
-	
+  if(iloop%500==0) output_facets (cs, stdout);	
 	}
 	
 		dump();
@@ -162,8 +169,16 @@ face-centered field, but my first tries were unsuccessful.
 ~~~gnuplot Curvature evolution
 set title 'Curvature' font 'Helvetica,20'
 set key left
+f(x) =  -4.5
 plot 'log' u 1:2 w l t 'min',  \
-     'log' u 1:3 w l  t 'max'
+     'log' u 1:3 w l  t 'max', \
+     f(x) dt 2 t 'equilibrium curvature'
+
+~~~
+
+~~~gnuplot Evolution of the interface
+set size ratio -1
+plot 'out' w l t ''
 ~~~
 
 ## References

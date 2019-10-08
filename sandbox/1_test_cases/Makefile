@@ -9,7 +9,7 @@ dirichlet.tst 						: CFLAGS += -DDIRICHLET=1 -DMTRACE=3
 dirichlet.c                         : neumann_double.c
 					ln -s neumann_double.c dirichlet.c
 
-mini_cell.tst  						: CFLAGS += -fopenmp
+gaussian_solidification.tst  		: CFLAGS += -fopenmp
 
 moving_embed.tst  					: CFLAGS += -fopenmp
 

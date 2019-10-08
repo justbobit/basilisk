@@ -1,3 +1,19 @@
+/**
+#Melt of a solid particle
+
+We simulate the diffusion of two tracers separated by an embedded boundary. The
+interface moves using the Stefan relation :
+
+$$
+  \mathbf{v}_{pc} = \frac{1}{L_H}(\lambda_1 \nabla T_L - \lambda_1 \nabla T_S)
+  $$
+where $L_H$ is the latent heat of water, $T_L$ and $T_S$ are the temperature
+fields on both sides of the interface.
+
+The boundaries of the domain are set at $T_L = 1$. The ice particle is initially
+at $T_S = -1$.
+
+*/
 
 #define DOUBLE_EMBED 	1
 #define LevelSet     	1
@@ -14,13 +30,13 @@
 #include "view.h"
 
 #define T_eq         0.
-#define TL_inf       -1.
+#define TL_inf       1.
 #define TS_inf       -1.
 
 /**
 Setup of the numerical parameters
 */
-int 	MAXLEVEL = 6; 
+int 	MAXLEVEL = 7; 
 double 	H0;
 
 /**
@@ -39,26 +55,38 @@ scalar grad1[], grad2[];
 
 double 	latent_heat = 10000.;
 double 	lambda[2]; 		// thermal capacity of each material
-double 	epsK = 0.0005, epsV = 0.0005;
+#if Gibbs_Thomson // parameters for the Gibbs-Thomson's equation
+double  epsK = 0.005, epsV = 0.005;
+#else
+double  epsK = 0.000, epsV = 0.000;
+#endif
 int 		nb_cell_NB;
 double  NB_width ;    // length of the NB
 
 scalar curve[];
 
-TL[embed]  = dirichlet(T_eq -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
+TL[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TL[top]    = dirichlet(TL_inf); 
 TL[bottom] = dirichlet(TL_inf); 
 TL[left]   = dirichlet(TL_inf); 
 TL[right]  = dirichlet(TL_inf); 
 
-TS[embed]  = dirichlet(T_eq -epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
+TS[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TS[top]    = dirichlet(TS_inf); 
 TS[bottom] = dirichlet(TS_inf); 
 TS[left]   = dirichlet(TS_inf); 
 TS[right]  = dirichlet(TS_inf); 
 
 /**
-Initial geometry definition
+Initial geometry definition. Here the interface equation is :
+
+$$
+r\left(1+ 0.15 *cos(6\theta) \right) - R
+$$
+where $r = \sqrt{x^2 + y^2}$, $\theta = \arctan(x,y)$ and $R = \frac{L_0}{5}$
+
+Notice that the initial dist[] field is not really a distance, it is modified
+after a few iterations of the LS_reinit() function.
 */
 double geometry(double x, double y, double Radius) {
 
@@ -68,14 +96,17 @@ double geometry(double x, double y, double Radius) {
 
   double theta = atan2 (y-center.y, x-center.x);
   double R2  =  sq(x - center.x) + sq (y - center.y) ;
-  double s = -( sqrt(R2*(1.+0.25*cos(8*theta))) - Radius);
+  double s = -( sqrt(R2)*(1.+0.15*cos(6*theta)) - Radius);
   // double s = -( sqrt(R2) - Radius);
 
   return s;
 }
 
 /**
-mystery variable !
+$k_{loop}$ is a variable used when the interface arrives in a new cell. Because
+we are using embedded boundaries, the solver needs to converge a bit more when
+the interface is moved to a new cell. Therefore, the Poisson solver is used
+$40*k_{loop} +1$ times.
 */
 int k_loop = 0;
 
@@ -107,6 +138,8 @@ double timestep_LS (const face vector u, double dtmax)
 
 
 int main() {
+
+  TOLERANCE = 2.e-7;
   int N = 1 << MAXLEVEL;
 	init_grid (N);
 	run();
@@ -114,7 +147,7 @@ int main() {
 
 
 event init(t=0){
-	DT         = L0 / (1 << MAXLEVEL); 	// Delta
+	DT         = 0.8*L0 / (1 << MAXLEVEL); 	// Delta
 	nb_cell_NB = 1 << 3 ; 							// number of cell in the 
 																			// narrow band 
 	NB_width   = nb_cell_NB * L0 / (1 << MAXLEVEL);
@@ -143,8 +176,8 @@ event init(t=0){
   boundary({curve});
 
   foreach() {
-    TL[] = -1;
-    TS[] = -1.;
+    TL[] = 0.;
+    TS[] = 0.;
   }
   boundary({TL,TS});
   restriction({TL,TS});
@@ -166,18 +199,20 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   int kk;
-  for (kk=1;kk<=(40*k_loop+1);kk++){
+  for (kk=1;kk<=(10*k_loop+1);kk++){
     if(i%2==0){
+    	boundary({TL});
       mg1 = diffusion(TL, 0.5*L0/(1 << MAXLEVEL), D = muv);
     }
     else{
+    	boundary({TS});
       mg2 = diffusion(TS, 0.5*L0/(1 << MAXLEVEL), D = muv );
     }
   }
 }
 
 event LS_advection(i++,last){
-  if(i%30 == 1){
+  if(i%2 ==1){
     double L_H       = latent_heat;  
 
     scalar cs0[];
@@ -194,21 +229,15 @@ event LS_advection(i++,last){
     restriction({cs,fs});
 
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
-      nb_cell_NB,lambda);
+      nb_cell_NB,lambda,epsK, epsV);
 
 	  recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
 
     dt = timestep_LS (v_pc, DT);
 
     stats s = statsf (v_pc.y);
-		fprintf(stderr, "# VELOCITY %g %g %g %g\n", dt, s.min, 
-			s.max, DT);	  
-		view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
-			bg = {1,1,1}, width = 600, height = 600, samples = 1);
-	  draw_vof("cs");
-	  squares("v_pc.y", min = s.min, max = s.max);
-	  save ("vpcy.png");
-		
+		fprintf(stderr, "%g %g %g \n", t, s.min, s.max);	  
+
     advection_LS (level_set, v_pc, dt);
     
    	boundary ({dist});
@@ -220,6 +249,9 @@ event LS_advection(i++,last){
 
 	  curvature(cs,curve);
 	  boundary({curve});
+
+    stats s2    = statsf(curve);
+    fprintf(stderr, "%g %g\n", s2.min, s2.max);
 
     foreach(){
       cs[]      = 1.-cs[];
@@ -244,7 +276,7 @@ event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
     LS_reinit2(dist,0.5*L0/(1 << MAXLEVEL), 
   	1.2*NB_width,
-    4);
+    1);
   }
 }
 
@@ -265,9 +297,10 @@ event double_calculation(i++,last){
 #endif
 
 
-event movies ( i++,last;i<1000)
+
+event movies ( i++,last;t<100.)
 {
-  if(i%10 == 1) {
+  if(i%40 == 1) {
     // if(i%20==1 && j ==1){
     boundary({TL,TS});
     scalar visu[];
@@ -275,10 +308,20 @@ event movies ( i++,last;i<1000)
       visu[] = (cs[])*TL[]+(1.-cs[])*TS[] ;
     }
     boundary({visu});
-    
+    // view (fov = 4.9, quat = {0,0,0,1}, tx = -0.64, ty = -0.62, 
+    // 	bg = {1,1,1}, width = 800, height = 800, samples = 1);
+	  
+		view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
+    	bg = {1,1,1}, width = 800, height = 800, samples = 1);
+	  
+
     draw_vof("cs");
     squares("visu", min =-0.2, max = 0.2);
     save ("visu.mp4");
+
+    draw_vof("cs");
+    squares("curve", min =-5., max = 5.);
+    save ("curve.mp4");
     
     boundary((scalar *){v_pc});
 
@@ -290,8 +333,6 @@ event movies ( i++,last;i<1000)
     boundary({TT});
 
 #if Gibbs_Thomson
-  double epsK = 0.005;
-  double epsV = 0.005;
 	  scalar curve[];
 	  curvature (cs,curve);
 	  boundary({curve});
@@ -300,12 +341,35 @@ event movies ( i++,last;i<1000)
 	    	-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
 	  }
 	  boundary({TT});
-	  stats s = statsf(TT);
-	  fprintf(stderr, "EQUILIBRIUM TEMP %g %g\n", s.min, s.max);
+	  // stats s = statsf(TT);
+	  // fprintf(stderr, "%g %g %g\n",t, s.min, s.max);
 #endif
-	 	draw_vof("cs");
-    squares("v_pc.x", min =-NB_width, max = NB_width);
-    save ("v_pcx.mp4");
+	 	// draw_vof("cs");
+   //  cells();
+   //  s = statsf(v_pc.x);
+   //  squares("v_pc.x", min =s.min, max = s.max);
+   //  save ("v_pcx.mp4");
 
+   //  clear();
+	 	// draw_vof("cs");
+   //  squares("dist", min =-NB_width, max = NB_width);
+   //  save ("dist.mp4");
+
+  	// fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
+  
   }
 }
+
+/**
+
+![Animation of the approximated temperature field](crystal/visu.mp4)(loop)
+
+![Animation of the curvature](crystal/curve.mp4)(loop)
+
+~~~gnuplot Temperature on the boundary
+set key left
+set yrange [-0.003:0.003]
+plot 'log' u 1:2 w l t 'min',  \
+     'log' u 1:3 w l  t 'max'
+~~~
+*/

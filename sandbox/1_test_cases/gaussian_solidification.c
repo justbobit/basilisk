@@ -1,5 +1,5 @@
 /**
-#Double diffusion of a scalar with a moving embed boundary.
+#Solidification of an interface slightly perturbed by a Gaussian function
 
 We simulate the diffusion of two tracers separated by an embedded boundary. The
 interface moves using the Stefan relation :
@@ -10,43 +10,32 @@ $$
 where $L_H$ is the latent heat of water, $T_L$ and $T_S$ are the temperature
 fields on both sides of the interface.
 
-The full algorithm is done on two iterations. It is the following :
+The full algorithm is done on two iterations can be found on the mini_cell test
+case.
 
-  1. Define the diffusion coefficient
-  1. Diffuse one tracer
-  1. Exchange the inside and the outside of the embed boundary
-  1. Define the diffusion coefficient
-  1. Diffuse the other tracer
-  1. Exchange the inside and the outside of the embed boundary
-  1. Move the interface using gradients calculated on both sides of the
-  interface
-  1. Reinit the level_set function
+![Animation of cs*u.x + (1-cs)*u2.x.](gaussian_solidification/visu.mp4)(loop)
 
-![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/visu.mp4)(loop)
+![Animation of cs*u.x + (1-cs)*u2.x.](gaussian_solidification/v_pcy.mp4)(loop)
 
-![Animation of cs*u.x + (1-cs)*u2.x.](mini_cell/v_pcy.mp4)(loop)
+We output only the interface at different times during the simulation.
 
-
-
-~~~gnuplot Phase change velocity
-f(x)  = a  - x/b
-f2(x)  = a  + x/b
-fit f(x)  'log' u ($1):(log($7)) via a ,b
-fit f2(x)  'log' u ($1):(log($6)) via a ,b
-
-
-ftitle(a,b) = sprintf("%.3fexp^{t/{%4.4f}}",a,b)
-latent(a) = sprintf("L_H  %4.4f",a)
-set grid
-set xlabel "time"
-set ylabel "log(v_{pc})"
-#set logscale y
-aa = 100.
-plot 'log' u 1:(log($7)) w l  t latent(aa/1), \
-      f(x) w l lw 3 t ftitle(a,b), \
-      f2(x) w l lw 3 t ftitle(a,b)
+~~~gnuplot Evolution of the interface (zoom)
+plot 'out' w l t ''
 ~~~
 
+As one can see, the Gaussian bump, slightly melts in the middle. This is due to
+the Gibbs-Thomson formulation that we use :
+
+$$
+T_m =  T_{eq} - \epsilon_\kappa \kappa - \epsilon_v v_{pc}
+$$
+where $T_m$ is the local equilibrium temperature on the interface, $T_{eq}$ is
+the phase change temperature (here 0), $\kappa$ is the local curvature of the
+interface, $v_{pc}$ the phase change velocity and $\epsilon_\kappa, \epsilon_v$
+are constants.
+
+In the middle of the domain, the local temperature on the interface is such that
+it is above the melting temperature $T_m$, therefore the ice melts.
 */
 
 #define DOUBLE_EMBED 1
@@ -63,8 +52,8 @@ plot 'log' u 1:(log($7)) w l  t latent(aa/1), \
 #include "view.h"
 #include "../level_set.h"
 
-#define T_eq         0.
-#define TL_inf       1.
+#define T_eq          0.
+#define TL_inf        1.
 #define TS_inf       -1.
 
 int MIN_LEVEL, MAXLEVEL; 
@@ -93,11 +82,10 @@ mgstats mgT;
 scalar grad1[], grad2[];
 
 #if Gibbs_Thomson
-double  epsK = 0.001, epsV = 0.001;
+double  epsK = 0.005, epsV = 0.005;
 #else
 double  epsK = 0.000, epsV = 0.000;
 #endif
-// double  epsK = 0., epsV = 0.;
 scalar curve[];
 
 
@@ -311,7 +299,7 @@ event double_calculation(i++,last){
 
 event movies ( i++,last;t<100.)
 {
-  if(i%20 == 1) {
+  if(i%40 == 1) {
     stats s2    = statsf(curve);
     stats s3    = statsf(v_pc.y);
 
@@ -322,12 +310,14 @@ event movies ( i++,last;t<100.)
     }
     boundary({visu});
     
-    
-    view (fov = 10.4411, quat = {0,0,0,1}, tx = -0.223746, 
-      ty = -0.00297483, bg = {1,1,1}, width = 600, 
-      height = 600, samples = 1);
+    view (fov = 20.5678, quat = {0,0,0,1}, tx = 0.0308985, 
+      ty = 0.0325629, bg = {1,1,1}, width = 800, height = 800, samples = 1);    
     draw_vof("cs");
     squares("curve", min =-5., max = 5.);
+    save ("curve.mp4");
+
+    draw_vof("cs");
+    squares("visu", min =-1., max = 1.);
     save ("visu.mp4");
 
     boundary((scalar *){v_pc});
@@ -345,10 +335,9 @@ event movies ( i++,last;t<100.)
     fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
       t, cap, cap2, cap3, T_point, s2.min, s2.max);
     fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
-
+    
+    if(i%600==1) {
+      output_facets (cs, stdout);
+    }
   }
 }
-
-// event dumps(t=25.){
-//   dump();
-// }
