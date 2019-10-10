@@ -21,17 +21,22 @@ We output only the interface at different times during the simulation.
 
 ~~~gnuplot test
 set term pngcairo size 800,800
-f(x)  = a/sqrt(x) + b
-fit f(x)  'log' u ($1):($7) via a ,b
-ftitle(a,b) = sprintf("%.3f/{t**1/2}+%.3f",a,b)
+f(x)  = a/sqrt(x-c) + b
+fit f(x)  'log' u ($1):($7) via a ,b,c
+ftitle(a,b,c) = sprintf('%.3f/(t-%.3f)^{0.5}+%.3f',a,b,c)
 latent(a) = sprintf("L_H  %4.4f",a)
 set grid
 set xlabel "time"
 set ylabel "v_{pc}"
 aa = 100.
 plot 'log' u 1:7 w l  t 'test', \
-      f(x) w l lw 3 t ftitle(a,b)
+      f(x) w l lw 3 t ftitle(a,b,c)
 ~~~
+
+~~~gnuplot Evolution of the interface (zoom)
+plot 'out' w l t ''
+~~~
+
 */
 
 #define DOUBLE_EMBED 1
@@ -149,8 +154,8 @@ initial position of the interface $h_0$ and the resolution of the grid.
 
 event init(t=0){
 
-  TOLERANCE = 2.e-7;
-  DT = L0/(1 << MAXLEVEL);
+  TOLERANCE = 5.e-8;
+  DT = 0.5*L0/(1 << MAXLEVEL);
 
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
@@ -201,7 +206,7 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   int kk;
-  for (kk=1;kk<=(10*k_loop+1);kk++){
+  for (kk=1;kk<=(80*k_loop+1);kk++){
     if(i%2==0){
       mg1 = diffusion(TL, L0/(1 << MAXLEVEL), D = muv);
     }
@@ -291,11 +296,10 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<100.)
+event movies ( i++,last;t<50.)
 {
   if(i%40 == 1) {
-    stats s2    = statsf(curve);
-    stats s3    = statsf(v_pc.y);
+    // stats s2    = statsf(curve);
 
     boundary({TL,TS});
     scalar visu[];
@@ -311,6 +315,12 @@ event movies ( i++,last;t<100.)
     squares("visu", min =-1., max = 1.);
     save ("visu.mp4");
 
+    if(i%600==1) {
+      output_facets (cs, stdout);
+    }
+  }
+  if(i%2 == 1){
+    stats s3    = statsf(v_pc.y);
     Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
 
     double cap  = capteur(p, TL);
@@ -319,10 +329,7 @@ event movies ( i++,last;t<100.)
     double T_point = cap2*cap + (1.-cap2)*cap3;
     fprintf (stderr, "%.9f %.9f %.9f %.9f %.9f %.9f %.9f\n",
       t, cap, cap2, cap3, T_point, s3.min, s3.max);
+
     fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
-    
-    if(i%600==1) {
-      output_facets (cs, stdout);
-    }
   }
 }
