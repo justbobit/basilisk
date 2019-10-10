@@ -2,6 +2,8 @@ CFLAGS +=  -O2
 
 include $(BASILISK)/Makefile.defs
 
+anisotropy.tst  						: CFLAGS += -fopenmp
+
 crystal.tst  						: CFLAGS += -fopenmp
 
 dirichlet.tst 						: CFLAGS += -DDIRICHLET=1 -DMTRACE=3
@@ -18,6 +20,8 @@ recons_speed.tst					: CFLAGS += -fopenmp
 reversed.tst      					: CFLAGS += -fopenmp
 
 solidification_Gibbs_Thomson.tst 	: CFLAGS += -events
+
+solidification_mwe.tst 				: CFLAGS += -fopenmp
 
 test_advection.tst					: CFLAGS += -fopenmp
 

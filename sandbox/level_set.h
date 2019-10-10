@@ -31,6 +31,12 @@ This function is to be used only with the embed boundary module. It relies on
 the calculation of gradients on both side of a boundary and modifies the value
 of v_pc which is the phase change velocity using the Stefan relation.
 */
+#if Gibbs_Thomson // prefactor for GT-formulation
+double fac1(double x, double y){
+  double theta = atan2 (y-L0/2., x-L0/2.);
+  return (1.-0.2*cos(4*theta));
+}
+#endif
 
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
  scalar tr2, vector v_pc, scalar dist, double L_H, 
@@ -39,7 +45,6 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 
   scalar T_eq[];
 
-#if Gibbs_Thomson
   scalar curve[];
   curvature (cs,curve);
   boundary({curve});
@@ -47,10 +52,10 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
 /**
 
 */
-
+#if Gibbs_Thomson
   foreach(){
-    T_eq[] = epsK*curve[] // here we suppose that Tm = 0
-             -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
+    T_eq[] = (epsK*curve[] // here we suppose that Tm = 0
+             -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y);
   }
 
 #else
