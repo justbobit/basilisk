@@ -1,11 +1,11 @@
 /**
-#Solidification of an interface slightly perturbed by a Gaussian function
+#Solidification minimum working example
 
 We simulate the diffusion of two tracers separated by an embedded boundary. The
 interface moves using the Stefan relation :
 
 $$
-  \mathbf{v}_{pc} = \frac{1}{L_H}(\lambda_1 \nabla T_L - \lambda_1 \nabla T_S)
+  \mathbf{v}_{pc} = \frac{1}{L_H}(\lambda_1 \nabla T_L - \lambda_2 \nabla T_S)
   $$
 where $L_H$ is the latent heat of water, $T_L$ and $T_S$ are the temperature
 fields on both sides of the interface.
@@ -13,24 +13,31 @@ fields on both sides of the interface.
 The full algorithm is done on two iterations can be found on the mini_cell test
 case.
 
-![Animation of cs*u.x + (1-cs)*u2.x.](gaussian_solidification/visu.mp4)(loop)
-
-![Animation of cs*u.x + (1-cs)*u2.x.](gaussian_solidification/v_pcy.mp4)(loop)
+![Animation of cs*u.x + (1-cs)*u2.x.](solidification_mwe/visu.mp4)(loop)
 
 We output only the interface at different times during the simulation.
 
-~~~gnuplot test
+
+~~~gnuplot Phase change velocity
 set term pngcairo size 800,800
-f(x)  = a/sqrt(x-c) + b
-fit f(x)  'log' u ($1):($7) via a ,b,c
-ftitle(a,b,c) = sprintf('%.3f/(t-%.3f)^{0.5}+%.3f',a,b,c)
+f(x)  = a/sqrt(x-c) - b
+f2(x)  = a2/sqrt(x-c2) - b2
+f3(x)  = a3/sqrt(x-c3) - b3 
+fit f(x)  'log1' u ($1):($7) via a ,b,c
+fit f2(x) 'log2' u ($1):($7) via a2,b2,c2
+fit f3(x) 'log3' u ($1):($7) via a3,b3,c3
+ftitle(a,c,b) = sprintf('%.3f/(t-%.3f)^{0.5}-%.3f',a,c,b)
 latent(a) = sprintf("L_H  %4.4f",a)
 set grid
 set xlabel "time"
 set ylabel "v_{pc}"
-aa = 100.
-plot 'log' u 1:7 w l  t 'test', \
-      f(x) w l lw 3 t ftitle(a,b,c)
+aa = 10.
+plot 'log1' u 1:7 w l  t latent(aa/1),\
+         f(x) w l dt 2 t ftitle(a,c,b), \
+    'log2' u 1:7 w l   t latent(aa/2), \
+        f2(x) dt 2 t ftitle(a2,c2,b2 ), \
+    'log3'  u 1:7 w l lc rgb "blue" t latent(aa/3), \
+        f3(x) dt 2 t ftitle(a3,c3,b3)
 ~~~
 
 ~~~gnuplot Evolution of the interface (zoom)
@@ -56,6 +63,8 @@ plot 'out' w l t ''
 #define T_eq          0.
 #define TL_inf        1.
 #define TS_inf       -1.
+
+#define tstart 5.
 
 int MIN_LEVEL, MAXLEVEL; 
 double H0;
@@ -95,6 +104,8 @@ double lambda[2];
 
 int     nb_cell_NB =  1 << 3 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
+
+
   
 mgstats mg1,mg2;
 
@@ -132,14 +143,14 @@ int main() {
   origin (-L0/2., -L0/2.);
   
   j = 1;
-  for (j=1;j<=1;j++){
+  for (j=1;j<=3;j++){
 
 /**
 Here we set up the parameters of our simulation. The latent heat $L_H$, the
 initial position of the interface $h_0$ and the resolution of the grid.
 */
-    latent_heat  = 10./j;
-    MAXLEVEL = MIN_LEVEL = 7;
+    latent_heat  = 100./j;
+    MAXLEVEL = MIN_LEVEL = 6;
 
     H0 = -0.2*L0; 
     N = 1 << MAXLEVEL;
@@ -148,19 +159,19 @@ initial position of the interface $h_0$ and the resolution of the grid.
 
     init_grid (N);
     run();
-    // fclose(fp1); 
+    fclose(fp1); 
   }
 }
 
 event init(t=0){
 
-  TOLERANCE = 5.e-8;
-  DT = 0.5*L0/(1 << MAXLEVEL);
+  TOLERANCE = 1.e-11;
+  DT = latent_heat/50.*L0/(1 << MAXLEVEL);
 
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
 
   lambda[0] = 1.;
-  lambda[1] = 1.;
+  lambda[1] = 1.4;
 
   foreach(){
       dist[] = clamp(plane(x,y,H0),-1.1*NB_width, 1.1*NB_width);
@@ -218,7 +229,7 @@ event tracer_diffusion(i++){
 
 
 event LS_advection(i++,last){
-  if(i%2 == 1){
+  if(i%2 == 1 ){
     double L_H       = latent_heat;  
 
     scalar cs0[];
@@ -240,34 +251,42 @@ event LS_advection(i++,last){
 
     recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
 
+    stats s2 = statsf (v_pc.y);
+
     dt = timestep_LS (v_pc, DT);
+
     
     boundary((scalar *){v_pc});
+    if(t>tstart){
 
-    advection_LS (level_set, v_pc, dt);
-    boundary ({dist});
-    restriction({dist});
+      advection_LS (level_set, v_pc, dt);
+      boundary ({dist});
+      restriction({dist});
 
-    fractions (dist, cs, fs);
-    boundary({cs,fs});
-    restriction({cs,fs});
+      fractions (dist, cs, fs);
+      boundary({cs,fs});
+      restriction({cs,fs});
 
-    curvature(cs,curve);
-    boundary({curve});
+      curvature(cs,curve);
+      boundary({curve});
 
-    foreach(){
-      cs[]      = 1.-cs[];
-    }
-    foreach_face(){
-      fs.x[]      = 1.-fs.x[];
-    }
+      foreach(){
+        cs[]      = 1.-cs[];
+      }
+      foreach_face(){
+        fs.x[]      = 1.-fs.x[];
+      }
 
-    boundary({cs,fs});
-    restriction({cs,fs});
+      boundary({cs,fs});
+      restriction({cs,fs});
 
-    k_loop = 0;
-    foreach(){
-      if(cs0[] != 1. && cs[] ==1.)k_loop = 1;
+      k_loop = 0;
+      foreach(){
+        if( (cs0[] != 1. && cs[] ==1.) || (cs0[] == 0. && cs[] !=0.))k_loop = 1;
+        // if( (cs0[] != 1. && cs[] ==1.) )k_loop = 1;
+        // if( (cs0[] == 0. && cs[] !=0.) )k_loop = 1;
+        // if( cs0[] != cs[] )fprintf(stderr, "%g %g\n", cs[], cs0[]);
+      }
     }
   }
 }
@@ -296,9 +315,9 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<50.)
+event movies ( i++,last;t<90.)
 {
-  if(i%40 == 1) {
+  if(i%200 == 1 && t > tstart) {
     // stats s2    = statsf(curve);
 
     boundary({TL,TS});
@@ -312,14 +331,14 @@ event movies ( i++,last;t<50.)
       ty = 0.0325629, bg = {1,1,1}, width = 800, height = 800, samples = 1);    
 
     draw_vof("cs");
-    squares("visu", min =-1., max = 1.);
+    squares("visu", min =0., max = 0.);
     save ("visu.mp4");
 
-    if(i%600==1) {
+    if(i%400==1 && j == 3) {
       output_facets (cs, stdout);
     }
   }
-  if(i%2 == 1){
+  if(i%2 == 1 && t>tstart){
     stats s3    = statsf(v_pc.y);
     Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
 
@@ -327,7 +346,7 @@ event movies ( i++,last;t<50.)
     double cap3 = capteur(p, TS);
     double cap2 = capteur(p, cs);
     double T_point = cap2*cap + (1.-cap2)*cap3;
-    fprintf (stderr, "%.9f %.9f %.9f %.9f %.9f %.9f %.9f\n",
+    fprintf (fp1, "%.9f %.9f %.9f %.9f %.9f %.9f %.9f\n",
       t, cap, cap2, cap3, T_point, s3.min, s3.max);
 
     fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
