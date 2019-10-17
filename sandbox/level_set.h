@@ -98,7 +98,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         double grad = dirichlet_gradient(point, tr, cs , n, p, 
           temp, &c);
         foreach_dimension(){
-          gtr.x[] += grad*n.x;
+          gtr.x[] += grad*n.x+tr[]*c;
         }
       }
     }
@@ -135,7 +135,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
         double grad = dirichlet_gradient(point, tr2, cs , n, p, 
           temp, &c);
         foreach_dimension(){
-          gtr2.x[] += grad*n.x;
+          gtr2.x[] += grad*n.x+tr2[]*c;
         }
       }
     }
