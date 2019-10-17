@@ -57,12 +57,10 @@ scalar curve[];
 double 	latent_heat = 1000.;
 double 	lambda[2]; 		// thermal capacity of each material
 #if Gibbs_Thomson
-double  epsK = 0.01, epsV = 0.;
+double  epsK = 0.02, epsV = 0.;
 
 TL[embed] = dirichlet(T_eq + (epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y));
-// TL[embed]  = dirichlet(T_eq);
-TS[embed]  = dirichlet(T_eq + (epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y));
-// TS[embed]  = dirichlet(T_eq);
+TS[embed] = dirichlet(T_eq + (epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y));
 
 
 #else
@@ -77,13 +75,11 @@ int 		nb_cell_NB;
 double  NB_width ;    // length of the NB
 
 
-TL[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TL[top]    = dirichlet(TL_inf); 
 TL[bottom] = dirichlet(TL_inf); 
 TL[left]   = dirichlet(TL_inf); 
 TL[right]  = dirichlet(TL_inf); 
 
-TS[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TS[top]    = dirichlet(TS_inf); 
 TS[bottom] = dirichlet(TS_inf); 
 TS[left]   = dirichlet(TS_inf); 
@@ -159,7 +155,7 @@ int main() {
 
 
 event init(t=0){
-	DT         = 0.4*L0 / (1 << MAXLEVEL); 	// Delta
+	DT         = 0.3*L0 / (1 << MAXLEVEL); 	// Delta
 	nb_cell_NB = 1 << 3 ; 							// number of cell in the 
 																			// narrow band 
 	NB_width   = nb_cell_NB * L0 / (1 << MAXLEVEL);
@@ -283,7 +279,7 @@ event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
     LS_reinit2(dist,0.5*L0/(1 << MAXLEVEL), 
   	1.2*NB_width,
-    1);
+    4);
   }
 }
 
@@ -323,7 +319,7 @@ event movies ( i++,last;t<30.)
 	  
 
     draw_vof("cs");
-    squares("visu", min =-0.2, max = 0.2);
+    squares("visu", min =-0.1, max = 0.1);
     save ("visu.mp4");
     stats s = statsf(v_pc.x);
     stats s2 = statsf(v_pc.y);

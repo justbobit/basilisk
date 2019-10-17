@@ -13,6 +13,11 @@ fields on both sides of the interface.
 The boundaries of the domain are set at $T_L = 1$. The ice particle is initially
 at $T_S = -1$.
 
+The temperature on the interface is derived from the Gibbs-Thomson relation,
+withtout any anisotropic effect :
+$$
+ T_{\Gamma} = T_{m} - \epsilon_{\kappa} * \kappa - \epsilon_{v} v_{pc}
+$$
 */
 
 #define DOUBLE_EMBED 	1
@@ -53,10 +58,10 @@ mgstats mgT;
 scalar grad1[], grad2[];
                                     
 
-double 	latent_heat = 10000.;
+double 	latent_heat = 500.;
 double 	lambda[2]; 		// thermal capacity of each material
 #if Gibbs_Thomson // parameters for the Gibbs-Thomson's equation
-double  epsK = 0.005, epsV = 0.005;
+double  epsK = 0.005, epsV = 0.001;
 #else
 double  epsK = 0.000, epsV = 0.000;
 #endif
@@ -65,13 +70,14 @@ double  NB_width ;    // length of the NB
 
 scalar curve[];
 
-TL[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
+TL[embed] = dirichlet(T_eq + (epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y));
+TS[embed] = dirichlet(T_eq + (epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y));
+
 TL[top]    = dirichlet(TL_inf); 
 TL[bottom] = dirichlet(TL_inf); 
 TL[left]   = dirichlet(TL_inf); 
 TL[right]  = dirichlet(TL_inf); 
 
-TS[embed]  = dirichlet(T_eq + epsK*curve[]-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]));
 TS[top]    = dirichlet(TS_inf); 
 TS[bottom] = dirichlet(TS_inf); 
 TS[left]   = dirichlet(TS_inf); 
@@ -81,7 +87,7 @@ TS[right]  = dirichlet(TS_inf);
 Initial geometry definition. Here the interface equation is :
 
 $$
-r\left(1+ 0.15 *cos(6\theta) \right) - R
+r\left(1+ 0.2 *cos(8\theta) \right) - R
 $$
 where $r = \sqrt{x^2 + y^2}$, $\theta = \arctan(x,y)$ and $R = \frac{L_0}{5}$
 
@@ -96,8 +102,7 @@ double geometry(double x, double y, double Radius) {
 
   double theta = atan2 (y-center.y, x-center.x);
   double R2  =  sq(x - center.x) + sq (y - center.y) ;
-  double s = -( sqrt(R2)*(1.+0.15*cos(6*theta)) - Radius);
-  // double s = -( sqrt(R2) - Radius);
+  double s = -( sqrt(R2)*(1.+0.2*cos(8*theta)) - Radius);
 
   return s;
 }
@@ -112,14 +117,9 @@ int k_loop = 0;
 
 
 /**
-Output variables
-*/
-mgstats mg1,mg2;
-
-
-/**
-Special routines
-*/
+We need to define a timestep on the mesh without taking into accound the
+embedded boundary.
+ */
 double timestep_LS (const face vector u, double dtmax)
 {
   static double previous = 0.;
@@ -147,7 +147,7 @@ int main() {
 
 
 event init(t=0){
-	DT         = 0.8*L0 / (1 << MAXLEVEL); 	// Delta
+	DT         = 0.9*L0 / (1 << MAXLEVEL); 	// Delta
 	nb_cell_NB = 1 << 3 ; 							// number of cell in the 
 																			// narrow band 
 	NB_width   = nb_cell_NB * L0 / (1 << MAXLEVEL);
@@ -156,7 +156,7 @@ event init(t=0){
   lambda[1] = 1.;
 
   foreach_vertex() {
-    dist[] = clamp(-geometry(x,y,L0/5.),-1.5*NB_width,1.5*NB_width);
+    dist[] = clamp(-geometry(x,y,L0/4.),-1.5*NB_width,1.5*NB_width);
   }
 
   boundary ({dist});
@@ -199,14 +199,14 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   int kk;
-  for (kk=1;kk<=(10*k_loop+1);kk++){
+  for (kk=1;kk<=(10*k_loop+1);kk++){ 
     if(i%2==0){
     	boundary({TL});
-      mg1 = diffusion(TL, 0.5*L0/(1 << MAXLEVEL), D = muv);
+      diffusion(TL, 0.5*L0/(1 << MAXLEVEL), D = muv);
     }
     else{
     	boundary({TS});
-      mg2 = diffusion(TS, 0.5*L0/(1 << MAXLEVEL), D = muv );
+      diffusion(TS, 0.5*L0/(1 << MAXLEVEL), D = muv );
     }
   }
 }
@@ -235,9 +235,6 @@ event LS_advection(i++,last){
 
     dt = timestep_LS (v_pc, DT);
 
-    stats s = statsf (v_pc.y);
-		fprintf(stderr, "%g %g %g \n", t, s.min, s.max);	  
-
     advection_LS (level_set, v_pc, dt);
     
    	boundary ({dist});
@@ -251,7 +248,7 @@ event LS_advection(i++,last){
 	  boundary({curve});
 
     stats s2    = statsf(curve);
-    fprintf(stderr, "%g %g\n", s2.min, s2.max);
+    fprintf(stderr, "%g %g %g\n",t, s2.min, s2.max);
 
     foreach(){
       cs[]      = 1.-cs[];
@@ -262,11 +259,10 @@ event LS_advection(i++,last){
 
     boundary({cs,fs});
     restriction({cs,fs});
-    // event ("properties");
 
     k_loop = 0;
     foreach(){
-      if(cs0[] != 1. && cs[] ==1.)k_loop = 1;
+      if( (cs0[] != 1. && cs[] ==1.) || (cs0[] == 0. && cs[] !=0.))k_loop = 1;
     }
   }
 
@@ -276,7 +272,7 @@ event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
     LS_reinit2(dist,0.5*L0/(1 << MAXLEVEL), 
   	1.2*NB_width,
-    1);
+    4);
   }
 }
 
@@ -298,18 +294,15 @@ event double_calculation(i++,last){
 
 
 
-event movies ( i++,last;t<100.)
+event movies ( i++,last;t<24.)
 {
-  if(i%40 == 1) {
-    // if(i%20==1 && j ==1){
+  if(i%30 == 1) {
     boundary({TL,TS});
     scalar visu[];
     foreach(){
       visu[] = (cs[])*TL[]+(1.-cs[])*TS[] ;
     }
     boundary({visu});
-    // view (fov = 4.9, quat = {0,0,0,1}, tx = -0.64, ty = -0.62, 
-    // 	bg = {1,1,1}, width = 800, height = 800, samples = 1);
 	  
 		view (fov = 20., quat = {0,0,0,1}, tx = -0.5, ty = -0.5, 
     	bg = {1,1,1}, width = 800, height = 800, samples = 1);
@@ -319,44 +312,6 @@ event movies ( i++,last;t<100.)
     squares("visu", min =-0.2, max = 0.2);
     save ("visu.mp4");
 
-    draw_vof("cs");
-    squares("curve", min =-5., max = 5.);
-    save ("curve.mp4");
-    
-    boundary((scalar *){v_pc});
-
-    scalar TT[];
-
-    foreach(){
-    	TT[] = 0.;
-    }
-    boundary({TT});
-
-#if Gibbs_Thomson
-	  scalar curve[];
-	  curvature (cs,curve);
-	  boundary({curve});
-	  foreach(){
-	    if(curve[] != nodata) TT[] = -epsK*curve[]-
-	    	-epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]);
-	  }
-	  boundary({TT});
-	  // stats s = statsf(TT);
-	  // fprintf(stderr, "%g %g %g\n",t, s.min, s.max);
-#endif
-	 	// draw_vof("cs");
-   //  cells();
-   //  s = statsf(v_pc.x);
-   //  squares("v_pc.x", min =s.min, max = s.max);
-   //  save ("v_pcx.mp4");
-
-   //  clear();
-	 	// draw_vof("cs");
-   //  squares("dist", min =-NB_width, max = NB_width);
-   //  save ("dist.mp4");
-
-  	// fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
-  
   }
 }
 
@@ -364,11 +319,8 @@ event movies ( i++,last;t<100.)
 
 ![Animation of the approximated temperature field](crystal/visu.mp4)(loop)
 
-![Animation of the curvature](crystal/curve.mp4)(loop)
-
 ~~~gnuplot Temperature on the boundary
 set key left
-set yrange [-0.003:0.003]
 plot 'log' u 1:2 w l t 'min',  \
      'log' u 1:3 w l  t 'max'
 ~~~

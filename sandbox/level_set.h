@@ -31,12 +31,14 @@ This function is to be used only with the embed boundary module. It relies on
 the calculation of gradients on both side of a boundary and modifies the value
 of v_pc which is the phase change velocity using the Stefan relation.
 */
-#if Gibbs_Thomson // prefactor for GT-formulation
 double fac1(double x, double y){
+#if GT_aniso // prefactor for GT-formulation
   double theta = atan2 (y-L0/2., x-L0/2.);
-  return (1.-0.2*cos(4*theta));
-}
+  return (1.-0.5*cos(4*theta));
+#else
+  return 1.;
 #endif
+}
 
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
  scalar tr2, vector v_pc, scalar dist, double L_H, 
@@ -50,7 +52,10 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   boundary({curve});
 
 /**
-
+The temperature on the interface is defined by :
+$$
+ T_{\Gamma} = T_{m} - \epsilon_{\kappa} * \kappa - \epsilon_{v} v_{pc}
+$$
 */
 #if Gibbs_Thomson
   foreach(){
@@ -71,7 +76,7 @@ void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
   The phase change velocity $\mathbf{v}_{pc}$ is
 
   $$
-  \mathbf{v}_{pc} = \mathrm{Pe}\, D\, \nabla tr
+\mathbf{v}_{pc} = \frac{1}{L_H}\left(\lambda_{L}\left.\nabla T_{L}\right|_{\Gamma} - \lambda_{S}\left.\nabla T_{S}\right|_{\Gamma}\right) 
   $$
   
   here we use the embed_gradient_face_x defined in embed that gives a proper
@@ -264,18 +269,20 @@ event LS_reinitialization(i++,last) {
 # LS_reinit function  
 
 V2 of the reinit function with subcell correction.
-Based on the work of Russo2000.
+Based on the work of Russo2000. We want to iterate on this equation :
+$$
+\dfrac{\partial \phi}{\partial t} = sign(\phi^{0}) \left(1- \nabla \phi\right)
+$$
+which can be discretized into :
 $$\phi^{n+1} = \phi^n - \Delta t S(\phi) G(\phi)$$
-far from the interface.
-
-Near the interface it is modified to :
+far from the interface. Near the interface it is modified to :
 $$\phi^{n+1} = \phi^n - \frac{\Delta t}{\Delta x} ( sgn(\phi^0) |\phi^n| - 
 D_i)$$
 
 with:
-$$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_0^i}$$.
+$$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_0^i}$$
 
-with:  
+and:  
 $$\Delta \phi_0^i = \max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
 \phi^0_{i}-\phi^0_{i+1})$$  
   
@@ -417,7 +424,7 @@ described by [Peng et al., 1999](#peng_pde-based_1999) by solving the following
 equation:
 
 $$
-\partial_t v_{pc}  + S(\phi) \frac{\nabla \phi}{|\nabla \phi|}. \nabla v_{pc}= 0
+\dfrac{\partial v_{pc}}{\partial t}  + S(\phi) \frac{\nabla \phi}{|\nabla \phi|}. \nabla v_{pc}= 0
 $$
 
 First part : calculate 
