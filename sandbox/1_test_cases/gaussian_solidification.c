@@ -19,8 +19,31 @@ case.
 
 We output only the interface at different times during the simulation.
 
+~~~gnuplot Evolution curvature
+set term pngcairo size 800,800 enhanced font 'Helvetica ,18'
+set output 'curve_gaussian.png'
+set xlabel 't'
+set ylabel 'Curvature'
+plot 'log' u 1:7 w l lw 2 t 'max', \
+    'log' u 1:6 w l lw 2 t 'min'
+~~~
+
 ~~~gnuplot Evolution of the interface (zoom)
-plot 'out' w l t ''
+set output 'v_pc_gaussian.png'
+set xlabel 't'
+set ylabel 'phase change speed'
+plot 'log' u 1:8 w l lw 2 t 'max', \
+    'log' u 1:9 w l lw 2 t 'min'
+
+~~~
+
+~~~gnuplot Evolution of the interface (zoom)
+set term pngcairo size 900,600 enhanced font 'Helvetica ,18'
+set output 'interfaces_gaussian.png'
+set xlabel 'X'
+set ylabel 'Y'
+set yrange [-1:0]
+plot 'out' w l lw 2 t 'Interface'
 ~~~
 
 As one can see, the Gaussian bump, slightly melts in the middle. This is due to
@@ -174,13 +197,6 @@ event init(t=0){
   curvature(cs,curve);
   boundary({curve});
   stats s2    = statsf(curve);
-  view (fov = 10.4411, quat = {0,0,0,1}, tx = -0.223746, 
-      ty = -0.00297483, bg = {1,1,1}, width = 600, 
-      height = 600, samples = 1);
-    draw_vof("cs");
-    squares("curve", min =s2.min, max = s2.max);
-    save ("curve_init.png");
-    fprintf(stderr, "%g %g\n", s2.min, s2.max);
 
   foreach() {
     TL[] = TL_inf;
@@ -253,8 +269,7 @@ event LS_advection(i++,last){
 
     curvature(cs,curve);
     boundary({curve});
-    stats s2    = statsf(curve);
-    fprintf(stderr, "%g %g\n", s2.min, s2.max);
+    
 
     foreach(){
       cs[]      = 1.-cs[];
@@ -332,8 +347,8 @@ event movies ( i++,last;t<100.)
     double cap3 = capteur(p, TS);
     double cap2 = capteur(p, cs);
     double T_point = cap2*cap + (1.-cap2)*cap3;
-    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-      t, cap, cap2, cap3, T_point, s2.min, s2.max);
+    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+      t, cap, cap2, cap3, T_point, s2.min, s2.max, s3.min, s3.max);
     fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
     
     if(i%600==1) {
