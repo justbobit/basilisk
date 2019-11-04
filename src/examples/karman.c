@@ -17,6 +17,8 @@ advect the passive tracer *f*. */
 #include "navier-stokes/centered.h"
 // #include "navier-stokes/perfs.h"
 #include "tracer.h"
+#include "view.h"
+
 
 scalar f[];
 scalar * tracers = {f};
@@ -95,19 +97,18 @@ event logfile (i++)
 /**
 We produce animations of the vorticity and tracer fields... */
 
-event movies (i += 4; t <= 15.)
-{
-  scalar omega[], m[];
-  vorticity (u, omega);
-  foreach()
-    m[] = cs[] - 0.5;
-  boundary ({m});
-  output_ppm (omega, file = "vort.mp4", box = {{-0.5,-0.5},{7.5,0.5}},
-	      min = -10, max = 10, linear = true, mask = m);
-  output_ppm (f, file = "f.mp4", box = {{-0.5,-0.5},{7.5,0.5}},
-	      linear = false, min = 0, max = 1, mask = m);
-}
 
+event image(t = 5.){
+    view (fov = 3.59317, quat = {0,0,0,1}, tx = -0.034018, ty = -0.0030541, bg = {1,1,1}, 
+      width = 600, height = 600, samples = 1);
+    cells();
+    draw_vof("cs", filled = -1);
+    squares("f", min =0., max = 1., map = cool_warm);
+    save ("embed_example.png");
+
+    cells();
+    save ("embed_example_grid.png");
+}
 /**
 We adapt according to the error on the embedded geometry, velocity and
 tracer fields. */
