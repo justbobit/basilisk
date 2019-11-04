@@ -199,7 +199,7 @@ event properties(i++){
 
 event tracer_diffusion(i++){
   int kk;
-  for (kk=1;kk<=(10*k_loop+1);kk++){ 
+  for (kk=1;kk<=3;kk++){ 
     if(i%2==0){
     	boundary({TL});
       diffusion(TL, 0.5*L0/(1 << MAXLEVEL), D = muv);
@@ -313,6 +313,10 @@ event movies ( i++,last;t<24.)
     save ("visu.mp4");
 
   }
+  if(i%600==1) {
+    output_facets (cs, stdout);
+  }
+
 }
 
 /**
@@ -324,4 +328,21 @@ set key left
 plot 'log' u 1:2 w l t 'min',  \
      'log' u 1:3 w l  t 'max'
 ~~~
+
+~~~gnuplot Evolution of the interface (zoom)
+set term pngcairo size 1000,1000 enhanced font 'Helvetica ,50'
+set key top right
+set output 'interfaces_crystal.png'
+set xrange [0.15:0.9]
+set yrange [0.15:0.9]
+unset xlabel
+unset xtics
+unset ytics
+unset border
+unset margin
+unset ylabel
+plot 'out' w l lw 4 t 'Interface'
+~~~
+
+
 */

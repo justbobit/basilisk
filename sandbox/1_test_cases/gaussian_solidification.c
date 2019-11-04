@@ -20,7 +20,7 @@ case.
 We output only the interface at different times during the simulation.
 
 ~~~gnuplot Evolution curvature
-set term pngcairo size 800,800 enhanced font 'Helvetica ,18'
+set term pngcairo size 800,600 enhanced font 'Helvetica ,18'
 set output 'curve_gaussian.png'
 set xlabel 't'
 set ylabel 'Curvature'
@@ -38,12 +38,15 @@ plot 'log' u 1:8 w l lw 2 t 'max', \
 ~~~
 
 ~~~gnuplot Evolution of the interface (zoom)
-set term pngcairo size 900,600 enhanced font 'Helvetica ,18'
+set term pngcairo size 900,600 enhanced font 'Helvetica ,36'
 set output 'interfaces_gaussian.png'
-set xlabel 'X'
-set ylabel 'Y'
+set xtics offset 0,graph 0.05
+set xtics -2,1,2
+set ytics -1,0.5,0
+unset xlabel
+unset ylabel
 set yrange [-1:0]
-plot 'out' w l lw 2 t 'Interface'
+plot 'out' w l lw 4 t 'Interface'
 ~~~
 
 As one can see, the Gaussian bump, slightly melts in the middle. This is due to
@@ -312,11 +315,11 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<100.)
+event movies ( i++,last;t<150.)
 {
+  stats s2    = statsf(curve);
+  stats s3    = statsf(v_pc.y);
   if(i%40 == 1) {
-    stats s2    = statsf(curve);
-    stats s3    = statsf(v_pc.y);
 
     boundary({TL,TS});
     scalar visu[];
@@ -327,32 +330,36 @@ event movies ( i++,last;t<100.)
     
     view (fov = 20.5678, quat = {0,0,0,1}, tx = 0.0308985, 
       ty = 0.0325629, bg = {1,1,1}, width = 800, height = 800, samples = 1);    
-    draw_vof("cs");
-    squares("curve", min =-5., max = 5.);
-    save ("curve.mp4");
+    // draw_vof("cs");
+    // squares("curve", min =-5., max = 5.);
+    // save ("curve.mp4");
 
     draw_vof("cs");
     squares("visu", min =-1., max = 1.);
     save ("visu.mp4");
 
-    boundary((scalar *){v_pc});
-    draw_vof("cs");
-    squares("v_pc.y", min =s3.min, max = s3.max);
-    save ("v_pcy.mp4");
+    // boundary((scalar *){v_pc});
+    // draw_vof("cs");
+    // squares("v_pc.y", min =s3.min, max = s3.max);
+    // save ("v_pcy.mp4");
 
 
-    Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
 
-    double cap  = capteur(p, TL);
-    double cap3 = capteur(p, TS);
-    double cap2 = capteur(p, cs);
-    double T_point = cap2*cap + (1.-cap2)*cap3;
-    fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-      t, cap, cap2, cap3, T_point, s2.min, s2.max, s3.min, s3.max);
     fprintf(stderr, "## %g %g %d\n", mg1.resa, mg2.resa, k_loop);
     
     if(i%600==1) {
       output_facets (cs, stdout);
     }
   }
+  if(i%2 ==1){
+    Point p     = locate(-1.51*L0/(1<<MIN_LEVEL),-3.51*L0/(1<<MIN_LEVEL));
+
+    double cap  = capteur(p, TL);
+    double cap3 = capteur(p, TS);
+    double cap2 = capteur(p, cs);
+    double T_point = cap2*cap + (1.-cap2)*cap3;
+   fprintf (stderr, "%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+    t, cap, cap2, cap3, T_point, s2.min, s2.max, s3.min, s3.max);
+   }
+ 
 }
