@@ -41,7 +41,7 @@ $$
 /**
 Setup of the numerical parameters
 */
-int 	MAXLEVEL = 7; 
+int 	MAXLEVEL = 6; 
 double 	H0;
 
 /**
@@ -102,7 +102,7 @@ double geometry(double x, double y, double Radius) {
 
   double theta = atan2 (y-center.y, x-center.x);
   double R2  =  sq(x - center.x) + sq (y - center.y) ;
-  double s = -( sqrt(R2)*(1.+0.2*cos(8*theta)) - Radius);
+  double s = -( sqrt(R2)*(1.+0.05*cos(8*theta)) - Radius);
 
   return s;
 }
@@ -139,7 +139,7 @@ double timestep_LS (const face vector u, double dtmax)
 
 int main() {
 
-  TOLERANCE = 2.e-7;
+  TOLERANCE = 2.e-6;
   int N = 1 << MAXLEVEL;
 	init_grid (N);
 	run();
@@ -165,7 +165,6 @@ event init(t=0){
   fractions (dist, cs, fs);
   boundary({cs,fs});
   restriction({cs,fs});
-
 
   foreach_face(){
     v_pc.x[] = 0.;
@@ -294,7 +293,7 @@ event double_calculation(i++,last){
 
 
 
-event movies ( i++,last;t<24.)
+event movies ( i++,last;t<12.)
 {
   if(i%30 == 1) {
     boundary({TL,TS});
@@ -313,7 +312,7 @@ event movies ( i++,last;t<24.)
     save ("visu.mp4");
 
   }
-  if(i%600==1) {
+  if(i%100==1) {
     output_facets (cs, stdout);
   }
 
@@ -329,19 +328,32 @@ plot 'log' u 1:2 w l t 'min',  \
      'log' u 1:3 w l  t 'max'
 ~~~
 
-~~~gnuplot Evolution of the interface (zoom)
-set term pngcairo size 1000,1000 enhanced font 'Helvetica ,50'
-set key top right
-set output 'interfaces_crystal.png'
-set xrange [0.15:0.9]
-set yrange [0.15:0.9]
+~~~gnuplot Initial interface
+set term pngcairo size 1000,1000
+set output 'initial_interface.png'
 unset xlabel
 unset xtics
 unset ytics
 unset border
 unset margin
 unset ylabel
-plot 'out' w l lw 4 t 'Interface'
+plot 'log' w l lw 8 lc rgb 'black' t ''
+~~~
+
+
+~~~gnuplot Evolution of the interface (zoom)
+set term pngcairo size 1000,1000 enhanced font 'Helvetica ,50'
+set key top right
+set output 'interfaces_crystal.png'
+set xrange [0.2:0.9]
+set yrange [0.2:0.9]
+unset xlabel
+unset xtics
+unset ytics
+unset border
+unset margin
+unset ylabel
+plot 'out' w l lw 3 t 'Interface'
 ~~~
 
 

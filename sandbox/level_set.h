@@ -26,7 +26,107 @@ The integration is performed using the Bell-Collela-Glaz scheme. */
 
 
 #include "curvature.h"
+
 /**
+# Various functions
+
+## Fluxes for functions that do not take into account embedded boundaries
+
+We redefine the fluxes for the level set advection and reconstruction of the
+associated velocity field, they do not take into account the embedded boundaries
+*/ 
+
+
+void tracer_fluxes_LS (scalar f,
+        face vector uf,
+        face vector flux,
+        double dt,
+        (const) scalar src)
+{
+
+  /**
+  We first compute the cell-centered gradient of *f* in a locally-allocated
+  vector field. */
+  
+  vector g[];
+  gradients ({f}, {g});
+
+  /**
+  For each face, the flux is composed of two parts... */
+
+  foreach_face() {
+
+    /**
+    A normal component... (Note that we cheat a bit here, `un` should
+    strictly be `dt*(uf.x[i] + uf.x[i+1])/((fm.x[] +
+    fm.x[i+1])*Delta)` but this causes trouble with boundary
+    conditions (when using narrow '1 ghost cell' stencils)). */
+
+    double un = dt*uf.x[]/(Delta + SEPS), s = sign(un);
+    int i = -(s + 1.)/2.;
+    double f2 = f[i] + (src[] + src[-1])*dt/4. + s*(1. - s*un)*g.x[i]*Delta/2.;
+
+    /**
+    and tangential components... */
+
+  
+    double vn = (uf.y[i] + uf.y[i,1])/2.;
+    double fyy = vn < 0. ? f[i,1] - f[i] : f[i] - f[i,-1];
+    f2 -= dt*vn*fyy/(2.*Delta);
+   
+
+    flux.x[] = f2*uf.x[];
+  }
+
+  /**
+  Boundary conditions ensure the consistency of fluxes across
+  variable-resolution boundaries (on adaptive meshes). */
+
+  boundary_flux ({flux});
+}
+
+/**
+## Advection without taking into account embedded boundaries
+*/
+
+void advection_LS (struct Advection p) //never takes into account the solid
+// boundary, the velocity field is defined on both phases.
+{
+
+  /**
+  If *src* is not provided we set all the source terms to zero. */
+  
+  scalar * lsrc = p.src;
+  if (!lsrc) {
+    const scalar zero[] = 0.;
+    for (scalar s in p.tracers)
+      lsrc = list_append (lsrc, zero);
+  }
+
+  assert (list_len(p.tracers) == list_len(lsrc));
+  scalar f, src;
+  for (f,src in p.tracers,lsrc) {
+    face vector flux[];
+    tracer_fluxes_LS (f, p.u, flux, p.dt, src);
+    foreach()
+      foreach_dimension()
+        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); // careful we have removed
+        // cm[]
+  }
+  boundary (p.tracers);
+
+  if (!p.src)
+    free (lsrc);
+}
+
+/**
+If needed (no tracer.h included), on can use this event for the level_set advection
+*/
+
+
+/**
+## Anisotropy of the Gibbs-Thomson relation
+
 This function is to be used only with the embed boundary module. It relies on
 the calculation of gradients on both side of a boundary and modifies the value
 of v_pc which is the phase change velocity using the Stefan relation.
@@ -40,6 +140,9 @@ double fac1(double x, double y){
 #endif
 }
 
+/**
+# Velocity on the fluid-solid interface
+*/
 void phase_change_velocity_LS_embed (scalar cs, face vector fs, scalar tr,
  scalar tr2, vector v_pc, scalar dist, double L_H, 
  double NB_width, int nb_cell_NB, double lambda[2],
@@ -58,6 +161,7 @@ $$
 $$
 */
 #if Gibbs_Thomson
+
   foreach(){
     T_eq[] = (epsK*curve[] // here we suppose that Tm = 0
              -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y);
@@ -96,10 +200,6 @@ $$
         line_length_center (n, alpha, &p);
         double c    = 0.;
         double temp = T_eq[];
-        // foreach_dimension(){
-        //   temp += v_pc.x[]*v_pc.x[];
-        // }
-        // temp = -0.2*sqrt(temp);
         double grad = dirichlet_gradient(point, tr, cs , n, p, 
           temp, &c);
         foreach_dimension(){
@@ -170,94 +270,7 @@ $$
   boundary((scalar *){v_pc});
 }
 
-/**
-We redefine the fluxes for the level set advection and reconstruction of the
-associated velocity field, they do not take into account the embedded boundaries
-*/ 
 
-
-void tracer_fluxes_LS (scalar f,
-        face vector uf,
-        face vector flux,
-        double dt,
-        (const) scalar src)
-{
-
-  /**
-  We first compute the cell-centered gradient of *f* in a locally-allocated
-  vector field. */
-  
-  vector g[];
-  gradients ({f}, {g});
-
-  /**
-  For each face, the flux is composed of two parts... */
-
-  foreach_face() {
-
-    /**
-    A normal component... (Note that we cheat a bit here, `un` should
-    strictly be `dt*(uf.x[i] + uf.x[i+1])/((fm.x[] +
-    fm.x[i+1])*Delta)` but this causes trouble with boundary
-    conditions (when using narrow '1 ghost cell' stencils)). */
-
-    double un = dt*uf.x[]/(Delta + SEPS), s = sign(un);
-    int i = -(s + 1.)/2.;
-    double f2 = f[i] + (src[] + src[-1])*dt/4. + s*(1. - s*un)*g.x[i]*Delta/2.;
-
-    /**
-    and tangential components... */
-
-  
-    double vn = (uf.y[i] + uf.y[i,1])/2.;
-    double fyy = vn < 0. ? f[i,1] - f[i] : f[i] - f[i,-1];
-    f2 -= dt*vn*fyy/(2.*Delta);
-   
-
-    flux.x[] = f2*uf.x[];
-  }
-
-  /**
-  Boundary conditions ensure the consistency of fluxes across
-  variable-resolution boundaries (on adaptive meshes). */
-
-  boundary_flux ({flux});
-}
-
-
-void advection_LS (struct Advection p) //never takes into account the solid
-// boundary, the velocity field is defined on both phases.
-{
-
-  /**
-  If *src* is not provided we set all the source terms to zero. */
-  
-  scalar * lsrc = p.src;
-  if (!lsrc) {
-    const scalar zero[] = 0.;
-    for (scalar s in p.tracers)
-      lsrc = list_append (lsrc, zero);
-  }
-
-  assert (list_len(p.tracers) == list_len(lsrc));
-  scalar f, src;
-  for (f,src in p.tracers,lsrc) {
-    face vector flux[];
-    tracer_fluxes_LS (f, p.u, flux, p.dt, src);
-    foreach()
-      foreach_dimension()
-        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); // careful we have removed
-        // cm[]
-  }
-  boundary (p.tracers);
-
-  if (!p.src)
-    free (lsrc);
-}
-
-/**
-If needed (no tracer.h included), on can use this event for the level_set advection
-*/
 
 event LS_advection (i++,last) {
 }
@@ -265,8 +278,20 @@ event LS_advection (i++,last) {
 Reinitialization method can be chosen by overloading this function */
 event LS_reinitialization(i++,last) {
 }
+
+ double dirichlet_embed_LS(Point point, scalar cs, face vector fs, 
+    face vector v_pc){
+
+  coord n = facet_normal (point, cs, fs);
+  normalize(&n);
+  double a = 0;
+  foreach_dimension()
+    a += n.x*v_pc.x[];
+  return a;
+}
+
 /**
-# LS_reinit function  
+# Reinitialization of the level-set function
 
 V2 of the reinit function with subcell correction.
 Based on the work of Russo2000. We want to iterate on this equation :
@@ -289,17 +314,6 @@ $$\Delta \phi_0^i = \max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
 
 Based on the work of Russo (2000)
  */
- double dirichlet_embed_LS(Point point, scalar cs, face vector fs, 
-    face vector v_pc){
-
-  coord n = facet_normal (point, cs, fs);
-  normalize(&n);
-  double a = 0;
-  foreach_dimension()
-    a += n.x*v_pc.x[];
-  return a;
-}
-
 void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   vector gr_LS[];
   int i ;
@@ -413,8 +427,9 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
     }
   }
 }
-
-
+/**
+# Reconstruction of a velocity off an interface
+*/  
 void recons_speed(scalar dist, double dt, int nb_cell_NB,
                   double NB, scalar * LS_speed){
 /**
@@ -441,6 +456,7 @@ using a centered approximation
 
     double sum=1e-15;
     foreach_dimension(){
+      // grad_dist.x[] = (dist[]-dist[-1,0])/(2.*Delta),
       grad_dist.x[] = min(dist[1,0]-dist[],
             min(dist[]-dist[-1,0],(dist[1,0]-dist[-1,0])/2))/Delta;
       sum += grad_dist.x[]*grad_dist.x[];

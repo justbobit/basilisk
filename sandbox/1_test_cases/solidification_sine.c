@@ -20,43 +20,10 @@ We output only the interface at different times during the simulation.
 
 ![](solidification_sine/pose_1D.png)
 
-~~~gnuplot Phase change velocity
+~~~gnuplot speed
 set term pngcairo size 1000,1000 font "Helvetica,24"
-set output 'pos_1D.png'
-set key bottom right
-f(x)  = a*x**b
-f2(x) = a2*x**b2 
-f3(x) = a3*x**b3  
-fit f(x)  'log1' u ($1):($2) via a,b
-fit f2(x) 'log2' u ($1):($2) via a2,b2
-fit f3(x) 'log3' u ($1):($2) via a3,b3
-ftitle(a,b) = sprintf('%.4f*(t)^{%.2f}',a,b)
-latent(a) = sprintf("St = %4.1e",a)
-set grid
-set xlabel "time"
-set ylabel "interface position"
-aa = 0.9
-set xrange [0:5]
-plot 'log1' u 1:2 pt 64 ps 1.25 t latent(aa),\
-        f(x) w l dt 2 lw 3 t ftitle(a,b), \
-    'log2' u 1:2 pt 64 ps 1.25 t latent(aa*2), \
-        f2(x) dt 2 lw 3 t ftitle(a2,b2 ), \
-    'log3'  u 1:2 pt 64 ps 1.25 lc rgb "blue" t latent(aa*3), \
-        f3(x) dt 2 lw 3 t ftitle(a3,b3)
-set output 'erreur.png'
-plot 'log1' u 1:($2-f($1)) w l lw 3 t 'err1', \
-     'log2' u 1:($2-f2($1)) w l lw 3 t 'err2',\
-     'log3' u 1:($2-f3($1)) w l lw 3 t 'err3'
-~~~
-
-
-~~~gnuplot Final position of the interface
-set output 'final_pos.png'
-unset xrange
-set ylabel "final interface position"
-set xlabel "ratio of thermal capacity"
-f(x) = x / (1+x)
-plot 'log' u 1:2 pt 64 ps 2 t 'basilisk', f(x) w l t 'x/(1+x)' 
+set output 'speed.png'
+plot 'log' u 1:2 w p t 'max', 'log' u 1:3 w p t 'min'
 ~~~
 
 */
@@ -64,7 +31,7 @@ plot 'log' u 1:2 pt 64 ps 2 t 'basilisk', f(x) w l t 'x/(1+x)'
 #define DOUBLE_EMBED 1
 #define LevelSet     1
 #define Gibbs_Thomson 0
-#define Pi 3.141592653579
+#define Pi 3.14159265358979323846
 
 #include "embed.h"
 #include "advection.h"
@@ -93,7 +60,7 @@ FILE * fp1;
 #define T_eq         0.
 
 
-#define plane(x, y, n) (y - 0.5  - 0.05*cos(2.*n*Pi*x))
+#define plane(x, y, n) (y - 0.5 - 0.2*sin(2.*n*Pi*x))
 // #define plane(x, y, H) (y - H)
 
 
@@ -163,13 +130,13 @@ int main() {
   origin (0., 0.);
   
   j = 1;
-  for (j=1;j<=4;j++){
+  for (j=1;j<=1;j++){
 
 /**
 Here we set up the parameters of our simulation. The latent heat $L_H$, the
 initial position of the interface $h_0$ and the resolution of the grid.
 */
-    latent_heat  = 50;
+    latent_heat  = 10;
     MAXLEVEL = MIN_LEVEL = 6 ;
 
     H0 = 0.5*L0; 
@@ -185,7 +152,7 @@ initial position of the interface $h_0$ and the resolution of the grid.
 
 event init(t=0){
 
-  TOLERANCE = 1.e-6;
+  TOLERANCE = 1.e-8;
   DT = latent_heat/50.*L0/(1 << MAXLEVEL);
 
   NB_width = nb_cell_NB * L0 / (1 << MAXLEVEL);
@@ -193,8 +160,9 @@ event init(t=0){
   lambda[0] = 1.;
   lambda[1] = 1.;
 
-  foreach_vertex(){
-      dist[] = clamp(plane(x,y,j),-1.1*NB_width, 1.1*NB_width);
+  foreach(){
+      dist[] = clamp(plane(x,y,2)-0.5*Delta/L0,
+                      -1.1*NB_width, 1.1*NB_width);
   }
   boundary ({dist});
   restriction({dist});
@@ -266,9 +234,15 @@ event LS_advection(i++,last){
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
       nb_cell_NB,lambda,epsK, epsV);
 
+    view (fov = 9.58686, quat = {0,0,0,1}, tx = -0.500645, ty = -0.479972, 
+      bg = {1,1,1}, width = 1438, height = 698, samples = 1);
+    box();
+    draw_vof("cs");
+    squares("v_pc.y");    
+    save ("v_pcy.mp4");
+
     recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
 
-    stats s2 = statsf (v_pc.y);
 
     dt = timestep_LS (v_pc, DT);
 
@@ -309,7 +283,7 @@ event LS_advection(i++,last){
 event LS_reinitialization(i++,last){
   if(i>0 && i%2==1){
     LS_reinit2(dist,L0/(1 << MAXLEVEL), 1.4*NB_width,
-      1);
+      4);
   }
 }
 
@@ -329,9 +303,9 @@ event double_calculation(i++,last){
 }
 #endif
 
-event movies ( i++,last;t<12.)
+event movies ( i++,last;t<2.)
 {
-  if(i%(20*j) == 1) {
+  if(i%2 == 1) {
 
     boundary({TL,TS});
     scalar visu[];
@@ -344,16 +318,16 @@ event movies ( i++,last;t<12.)
       bg = {1,1,1}, width = 600, height = 600, samples = 1);
 
     draw_vof("cs");
-    squares("visu", min =-1., max = 1.);
-    save ("visu.mp4");
-
-    // if(i%400==1 && j == 3) {
-      // output_facets (cs, stdout);
-    // }
+    squares("dist", min =-NB_width, max = NB_width);
+    save ("dist.mp4");
+    if(i%30==1 && j == 1 && i < 250) {
+      output_facets (cs, stdout);
+    }
   }
   if(i%2 == 1){
 
     double y_max = -L0;
+    stats s2 = statsf (v_pc.y);
 
     vector h[];
     heights (cs, h);
@@ -366,22 +340,21 @@ event movies ( i++,last;t<12.)
     }
     // fprintf(stderr, "%g %g\n",t, y_max);
 
-    fprintf (fp1, "%.9f %.9f\n",
-      t, y_max);
+    fprintf (stderr, "%.9f %.9f %.9f\n",
+      t, s2.max, s2.min);
   }
 }
-
-event finalpos (t=10.){
-    double y_max = 0.;
-
-    vector h[];
-    heights (cs, h);
-    boundary((scalar *){h});
-    foreach(reduction(max:y_max)){
-      if(interfacial(point, cs)){
-        double yy = y+Delta*height(h.y[]);
-        y_max = max(y_max,yy);
-      }     
-    }  
-    fprintf (stderr, "%.9f %.9f\n", lambda[1]/lambda[0],y_max);
-}
+/**
+~~~gnuplot Evolution of the interface
+set term pngcairo size 1000,1000 enhanced font 'Helvetica ,50'
+set key top right
+set output 'interfaces_sine.png'
+unset xlabel
+unset xtics
+unset ytics
+unset border
+unset margin
+unset ylabel
+plot 'out' w l lw 4 t 'Interface'
+~~~
+*/
