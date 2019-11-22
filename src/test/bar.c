@@ -6,10 +6,19 @@ al, 1994](/src/references.bib#luth1994) studied experimentally the
 transformation of sinusoidal waves propagating over a submerged bar
 (or reef). This is a good test case for dispersive models as higher
 harmonics are nonlinearly generated and released with phase shifts
-corresponding to the dispersion relation. */
+corresponding to the dispersion relation. 
+
+This test case is discussed in [Popinet
+(2019)](/Bibliography#popinet2019) for the layered version. */
 
 #include "grid/multigrid1D.h"
-#include "green-naghdi.h"
+#if ML
+  #include "layered/hydro.h"
+  #include "layered/nh.h"
+  #include "layered/remap.h"
+#else
+  #include "green-naghdi.h"
+#endif
 
 /**
 The basin needs to be long enough so as to minimise the influence of
@@ -20,6 +29,10 @@ int main() {
   N = 2048;
   L0 = 50;
   G = 9.81;
+#if ML
+  nl = 2;
+  breaking = 0.1;
+#endif
   run();
 }
 
@@ -31,10 +44,17 @@ desired sinusoidal wave form. We have to tune the amplitude to obtain
 the required amplitude as measured in the experiment at gauge 4. The
 period of 2.02 seconds matches that of the experiment. */
 
-u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
-u.n[right] = + radiation (0);
-
 event init (i = 0) {
+
+#if ML
+  for (vector u in ul) {
+    u.n[left]  = - radiation (0.021*sin(2.*pi*t/2.02));
+    u.n[right] = + radiation (0);
+  }
+#else
+  u.n[left]  = - radiation (0.03*sin(2.*pi*t/2.02));
+  u.n[right] = + radiation (0);  
+#endif
   
   /**
   Here we define the bathymetry, see e.g. Figure 3 of [Yamazaki et al,
@@ -46,7 +66,12 @@ event init (i = 0) {
 	    x < 14 ? -0.1 :
 	    x < 17 ? -0.1 - (x - 14.)/3.*0.3 :
 	    -0.4);
+#if ML
+    for (scalar h in hl)
+      h[] = max(- zb[], 0.)/nl;
+#else
     h[] = - zb[];
+#endif
   }
 }
 
@@ -100,7 +125,7 @@ Gauge gauges[] = {
   {NULL}
 };
 
-event output (i += 5; t <= 40)
+event output (i += 2; t <= 40)
   output_gauges (gauges, {eta});
 
 /**
@@ -125,29 +150,29 @@ set tmargin 0.5
 unset xtics
 # t0 is a tunable parameter
 t0 = -0.24
-plot 'WG4' u ($1+t0):($2*100.) w l lw 2 t 'gauge 4', \
+plot 'WG4' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 4', \
      '../gauge-4' pt 6 lc -1 t ''
 unset ytics
-plot 'WG5' u ($1+t0):($2*100.) w l lw 2 t 'gauge 5', \
+plot 'WG5' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 5', \
      '../gauge-5' pt 6 lc -1 t ''
 set ytics -2,2,6
-plot 'WG6' u ($1+t0):($2*100.) w l lw 2 t 'gauge 6', \
+plot 'WG6' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 6', \
      '../gauge-6' pt 6 lc -1 t ''
 unset ytics
-plot 'WG7' u ($1+t0):($2*100.) w l lw 2 t 'gauge 7', \
+plot 'WG7' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 7', \
      '../gauge-7' pt 6 lc -1 t ''
 set ytics -2,2,6
-plot 'WG8' u ($1+t0):($2*100.) w l lw 2 t 'gauge 8', \
+plot 'WG8' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 8', \
      '../gauge-8' pt 6 lc -1 t ''
 unset ytics
-plot 'WG9' u ($1+t0):($2*100.) w l lw 2 t 'gauge 9', \
+plot 'WG9' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 9', \
      '../gauge-9' pt 6 lc -1 t ''
 set xtics
 set ytics -2,2,6
-plot 'WG10' u ($1+t0):($2*100.) w l lw 2 t 'gauge 10', \
+plot 'WG10' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 10', \
      '../gauge-10' pt 6 lc -1 t ''
 unset ytics
-plot 'WG11' u ($1+t0):($2*100.) w l lw 2 t 'gauge 11', \
+plot 'WG11' u ($1+t0):($2*100.) w l lc -1 lw 2 t 'gauge 11', \
      '../gauge-11' pt 6 lc -1 t ''
 unset multiplot
 ~~~

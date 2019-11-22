@@ -325,7 +325,9 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     REJECT;
   uline();
   // bibtex file
-  char * command = acat ("bibtex2html -a -use-keys -nodoc -noheader -q | ",
+  char * command = acat ("bibtex2html -a -d -r "
+			 "-no-keywords -noabstract -use-keys "
+			 "-nodoc -noheader -q | ",
 			 "sed -e 's|</table>.*|</table>|' -e '/<\\/table>/q' > ",
 			 yyextra->page, ".bib2html",
 			 NULL);
@@ -349,7 +351,9 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     }
     output_s ("~~~\n</div>\n");
     output_s ("![");
-    output_s (yyextra->gnuplot);
+    char * s = yyextra->gnuplot;
+    while (*s != '{' && *s != '\0')
+      output_c(*s++);
     printf (" (<a href=\"#\" id=\"buttonplot%d\">script</a>)", yyextra->nplots);
     output_s ("](");
     char timestamp[80];
@@ -358,6 +362,11 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
     output_s (name);
     free (name);
     output_s(")");
+    if (*s == '{') {
+      while (*s != '}' && *s != '\0')
+	output_c(*s++);
+      output_c ('}');
+    }
     printf ("\n\n<div class=\"plot-script\" id=\"afterplot%d\"></div>", yyextra->nplots);
     free (yyextra->gnuplot);
     yyextra->gnuplot = NULL;
@@ -413,7 +422,7 @@ savefig{SP}*[(]{SP}*['"][^'"]+['"] {
       output_s (options);
       output_c (' ');
     }
-    output_s ("controls><source src=\"");
+    output_s ("controls preload=\"metadata\"><source src=\"");
     output_s (link);
     fprintf (yyextra->out, "?%ld", time (NULL));
     output_s ("\" type = \"video/");

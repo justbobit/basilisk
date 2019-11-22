@@ -3139,7 +3139,7 @@ int main (int argc, char ** argv)
       ;
     else if (!strcmp (argv[i], "-nolineno")) {
       nolineno = 1;
-      strcat (command1, " -DNDEBUG");
+      strcat (command1, " -D'assert(x)=((void)(x))'");
     }
     else if (!strcmp (argv[i], "-o")) {
       strcat (command1, " ");

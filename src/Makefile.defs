@@ -86,6 +86,9 @@ clean:
 %.dot.png: %.dot
 	dot -Tpng -o $@ < $<
 
+%.dot.svg: %.dot
+	dot -Tsvg -o $@ < $<
+
 # fixme: this is obsolete
 %/plot.png: %.plot
 	cd $* && gnuplot -e "batch=1; PNG=\"$(PNG)\"; set term $(PNG) enhanced font \",10\"; set output 'plot.png'; set macros;" ../$< || rm -f plot.png
@@ -98,6 +101,13 @@ clean:
 	cd $* && gawk -f $(BASILISK)/python.awk < ../$*.c > plots.py && \
 	python plots.py || rm -f plots
 	@test -f $*/plots || exit 1
+
+%/pdf-plots: %.c $(BASILISK)/gnuplot.awk $(BASILISK)/python.awk \
+		$(BASILISK)/gnuplot.sh
+	cd $* && \
+	gawk -v pdf=true -f $(BASILISK)/gnuplot.awk < ../$*.c > pdf-plots && \
+	PNG=$(PNG) sh $(BASILISK)/gnuplot.sh . pdf-plots || rm -f pdf-plots
+	@test -f $*/pdf-plots || exit 1
 
 %.gnu: %.eps
 	pstoedit -f gnuplot -flat 0.1 $< $@

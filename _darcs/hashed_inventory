@@ -1,4 +1,4 @@
-pristine:ff8ce6daa9997852c4dd209114835c37f0da1269f44a301d7bacf5eb015fa43d
+pristine:d3d0930550ab782791e1fcd45a8e1b73032261cc198bf7e978d931e4e89f3842
 Starting with inventory:
 0000014052-aed92a036e11a4793701cca85e63723492768df7a17c4106201926ef05ca16cf
 [TAG release 2019-05-24
@@ -238,3 +238,345 @@ Stephane Popinet <popinet@basilisk.fr>**20190819073854
  Ignore-this: fb70756600e00da323a889989dd441d8
 ] 
 hash: 0000000915-34e4a05d35d273f3cfe2b6a5f023ca9551288d66c602f5bff9887b8d59293cb0
+[A new layered hydrostatic model
+Stephane Popinet <popinet@basilisk.fr>**20190911135746
+ Ignore-this: 2245324756388372b50c122f449465b8
+] 
+hash: 0000004819-cd9a28c4a50b51b6e896fd738724d419d34c548f86c13309ee95aff3e56000a6
+[Wave dispersion test case
+Stephane Popinet <popinet@basilisk.fr>**20190912150419
+ Ignore-this: b3101257ed4b0fe96b71764614783645
+] 
+hash: 0000015883-8d935f89e007541827699e971b4ff1525314f56c1e29b4cf54569e68af216f5b
+[Sinusoidal wave propagation over a bar with the multilayer solver
+Stephane Popinet <popinet@basilisk.fr>**20190912155427
+ Ignore-this: 6468085e1cd98e88de80519f15b372fb
+] 
+hash: 0000014492-470703c18c7256a99d4c150a4a6448c74f15051d0d81f23266c1044d12c778b9
+[Wind-driven lake test of the multilayer solver
+Stephane Popinet <popinet@basilisk.fr>**20190913162612
+ Ignore-this: 1c77ed347a2df061e91a8ed336ccd966
+] 
+hash: 0000006869-1ab81f3b44764f2551a0f86d04c1ff524ede50c69c71347dbb7c763254235872
+[Added energy evolution to dispersion test
+Stephane Popinet <popinet@basilisk.fr>**20190914161937
+ Ignore-this: 4b93f7e10e9a3efba9bced620e4f31f6
+] 
+hash: 0000012229-92b57745742e2588729bbd069d94a642ccbb65df764eaccb3484c3d5b1371958
+[Non-hydrostatic Keller box model extension
+Stephane Popinet <popinet@basilisk.fr>**20190914171715
+ Ignore-this: 763f2472414562c292212312633586c3
+] 
+hash: 0000007471-4320410fce72c15ab02f72caca379c9b26a3ddd22b179111b4b50ca4063f219b
+[Non-hydrostatic stability condition
+Stephane Popinet <popinet@basilisk.fr>**20190918091521
+ Ignore-this: f014a92d2259f690b4dc6c0031bb764d
+] 
+hash: 0000000526-ee0f106c24f8e247bf6d4551f73d3256a5983a5a4eeae33096fb5567e1e4a1cb
+[New Tohoku tsunami example
+Stephane Popinet <popinet@basilisk.fr>**20190927161124
+ Ignore-this: 67a4324318bfab8dc6c9bad84dbc95
+] 
+hash: 0000014032-80e13b1b2880a9baa226e5bc151b25f78c2ce6636a3d2847c52366195899cf9a
+[Vertical remapping (REVIEW)
+Stephane Popinet <popinet@basilisk.fr>**20191004095404
+ Ignore-this: b2f3ebe65332fa3ff0d01daf6b8951d8
+] 
+hash: 0000003108-222572146a3d97aaafb82760967e6c7be21bc5f38525c15d40a87a0909af0bf4
+[Vertical viscosity (REVIEW)
+Stephane Popinet <popinet@basilisk.fr>**20191004095420
+ Ignore-this: 2f6790a5b6a3131829f9539250446d78
+] 
+hash: 0000003463-945b42f851535390ce85245efbf01d911c7a9349161f685d8a8644b86e077377
+[References for dispersion test case
+Stephane Popinet <popinet@basilisk.fr>**20191004141107
+ Ignore-this: fc07e0dee2e3d3f21b31f5aa8b0ff092
+] 
+hash: 0000013430-3b80a3fc5b89a5a8cb0ee0cd0d79d96ae06c536feac96328a7a3aeb7e291ebfc
+[Beach test case for layered model
+Stephane Popinet <popinet@basilisk.fr>**20191004141253
+ Ignore-this: 2c5c69f3be23ffb1885b205432f2b299
+] 
+hash: 0000005996-04b350bda038317a81aa75ca94ee7c65943adb5c77ddb06afc3eb0b8edf2bfe6
+[Conical island test case for the layered model
+Stephane Popinet <popinet@basilisk.fr>**20191004144840
+ Ignore-this: 833b35e18a67a823b1e90dd30d454063
+] 
+hash: 0000057091-6bf5d1bed5fa0584c1ba7d9c319a4f6ce1cab84b23405a7138864570bac2d803
+[Oscillations in a parabola test case for multilayer
+Stephane Popinet <popinet@basilisk.fr>**20191004150102
+ Ignore-this: f77476f0e3126dac0c9fd27f5d67633
+] 
+hash: 0000001908-9f5b0bd31bbb8e252e71828985101054f59786104e23ce9b7b2811f5532be92f
+[Longitude-latitude test case for the layered model
+Stephane Popinet <popinet@basilisk.fr>**20191004150516
+ Ignore-this: ec289dab8867f558799a20c506a5965f
+] 
+hash: 0000000501-da06773f343194c61c4cefff08b8433ad4b9ec8414aa3f3b6d236305ca88e3a4
+[Updated references for wind-driven-lake test case
+Stephane Popinet <popinet@basilisk.fr>**20191004153437
+ Ignore-this: 808d5a2c0379b1f624a7c54efa70ca2
+] 
+hash: 0000002751-cdc71f8d4c12b0a6b964a93f4280e6927359a6023089b3fe3e5a191d852e7534
+[New velocity-based layered formulation (REVIEW)
+Stephane Popinet <popinet@basilisk.fr>**20191004163527
+ Ignore-this: 26d4836aad30316245d5424fec58ef28
+] 
+hash: 0000022942-0b6eb6e31ec9589193edb46d0e94b8754b976b596020a85c93e5da3e1041d76d
+[Jet formation by a closing cavity
+Stephane Popinet <popinet@basilisk.fr>**20191006145858
+ Ignore-this: bde6a58c1916efae9b85159c745df265
+] 
+hash: 0000175356-99cea433c82f873e1900b48f703d05562774f030e0c9f49ea8032000cfd67527
+[New transcritical flow over a bump test case
+Stephane Popinet <popinet@basilisk.fr>**20191007085058
+ Ignore-this: 907098fb55f4d8e28d80e440bacf7647
+] 
+hash: 0000655237-d7b63f2848daee51566c2b1c63f0cb4d02611311c8e17240d320c3662ce51589
+[New example 'Transcritical flow over a bump with multiple layers'
+Stephane Popinet <popinet@basilisk.fr>**20191010105743
+ Ignore-this: 627483e95eb83e8600200d22e4997803
+] 
+hash: 0000004582-3e7688bbd0f4076d1c05c469a48acf0f0c2685476fef17a2a13d0093130ff27b
+[Breaking Stokes wave
+Stephane Popinet <popinet@basilisk.fr>**20191010105801
+ Ignore-this: d099f54b60a79a026ef7bb12d83fe8a8
+] 
+hash: 0000303244-f4b47fd6d56797dc8c35449f46a3d2668b49e6675aa058bb27e81d38a80f43ce
+[Seawall test case for layered model
+Stephane Popinet <popinet@basilisk.fr>**20191010105838
+ Ignore-this: 4dae977c5a627255e08632d1fa9c88fe
+] 
+hash: 0000046753-f0386c567127151f1bcedd1ab6afb1a451fbef0c56b0e64b5b79d5efa2f1fd59
+[References for bar-ml test case
+Stephane Popinet <popinet@basilisk.fr>**20191010105903
+ Ignore-this: c58fa1e01655ea6da46137fb60bd32ad
+] 
+hash: 0000022232-889d4585a76745871acb3ba742d18a31d875b9e2c7cfebdbfb6f9b026bb36d0e
+[Adjusted references for new tolerance on multilayer divergence
+Stephane Popinet <popinet@basilisk.fr>**20191011101205
+ Ignore-this: 47786cb8b836f56d56c7fccab4e8879c
+] 
+hash: 0000354649-9197e3ec9901276c06c73ec059dd3c7bdf509481a9a61ad4aac1af37b9a8c364
+[HTML Image arguments can be specified for inline plots
+Stephane Popinet <popinet@basilisk.fr>**20191011130904
+ Ignore-this: e24ad2a176585ed030a1ac57ba9664c8
+] 
+hash: 0000000472-870cb4769ad5b9d12fdbebd004a4871843aacc345706e7560b8c3dd2a793cce9
+[Recipe for SVG dot files
+Stephane Popinet <popinet@basilisk.fr>**20191011130936
+ Ignore-this: 2ffb001951efad9b92dba7f8046ca501
+] 
+hash: 0000000200-5f1337f59b4704872899ce630f715195b1439c7a3d9c80a9c6836d69f9069c5a
+[output_ppm() only generates even-sized pictures
+Stephane Popinet <popinet@basilisk.fr>**20191011131619
+ Ignore-this: cdf90d4bfdfce25458f8524685a1913
+ 
+ To work around a bug in ffmpeg which does not allow odd-sized movies.
+] 
+hash: 0000000269-d73ad60030bf51b8d596b91d645f88b919a1f427ecbd316ed3bccf7115df900b
+[terrain() now understands '~' and replaces it with $HOME
+Stephane Popinet <popinet@basilisk.fr>**20191011131747
+ Ignore-this: 63d7ace919018a1709023df8e78b1d4
+] 
+hash: 0000000624-f8cac762f28423eaa39815acd49f680266dddfdfeff10381209fe030d4cadac1
+[Okada faults can now be specified as an array
+Stephane Popinet <popinet@basilisk.fr>**20191011133033
+ Ignore-this: 890ca8b793a90640aa483d4e6dbb46b9
+] 
+hash: 0000003045-6b6c86cae46a2c37175bc27363d8ff238f5171a5f439dbaa2e39bdf09ab6577a
+[Restructured Saint-Venant solver for re-use in layered model
+Stephane Popinet <popinet@basilisk.fr>**20191011143040
+ Ignore-this: e18166a93bac8a415b57960288214910
+] 
+hash: 0000003948-ad48f1e73ad1c54a3944ead64ea134d135993ccd913ffdc571961404f5db9cad
+[Layered (REVIEW)
+Stephane Popinet <popinet@basilisk.fr>**20191014152218
+ Ignore-this: 58fca5440646ee4e887c16ba712cd3f7
+] 
+hash: 0000548142-5e876e70237a638c4bb3658b1e37bd599f95d3f508a21f74128c14caed169e8c
+[Filter for grid-scale oscillations of the layered solver
+Stephane Popinet <popinet@basilisk.fr>**20191113142000
+ Ignore-this: 60ea20fa2a5b85c35f420a25ff471a5b
+] 
+hash: 0000002269-2bfa57f43d1c25f9ae598aeb1204372cfa64736388d7ac87c28e5c71ead4a6a5
+[Cosmetics
+Stephane Popinet <popinet@basilisk.fr>**20191113143410
+ Ignore-this: afaced7ae966eeaf05c1fd8bac3abfa9
+] 
+hash: 0000000603-ebeba0728e8f7945dee5d4d5eb248dad6ef495bbd25c492868068d799b0bedf6
+[Updated mesa versions and links to Basilisk Mesa tarballs
+Stephane Popinet <popinet@basilisk.fr>**20191113143556
+ Ignore-this: 5d264c84b066fb7d89d0be4217826830
+] 
+hash: 0000000430-4321e6e831850f9ceef32183ebef91042dc05e1c7f7eb0cb249e0264833c2bd1
+[Performance monitoring for the layered solver
+Stephane Popinet <popinet@basilisk.fr>**20191113143930
+ Ignore-this: c3f2520566c09b1e9a79a85d5b30afa0
+] 
+hash: 0000005405-b988eee2901fb1fdb364e872e4463b4645e047176c01892826654259c29c67da
+[New Tohoku example
+Stephane Popinet <popinet@basilisk.fr>**20191113144441
+ Ignore-this: b06453dac4f6935fe8a604bd3f540756
+] 
+hash: 0000052580-34285dd000932c65f42838a17927fe7bd82bcb92bf1290b2c7931a723f2de779
+[Multilayer tests
+Stephane Popinet <popinet@basilisk.fr>**20191113144610
+ Ignore-this: 580cb429e9fbd75742b4a54869828ad5
+] 
+hash: 0000002043-1429e08d8726e9e2a48d9ce6054aef9624d85b5fab5ab45daff374936f0790a5
+[Fixed formatting of Brusselator figures
+Stephane Popinet <popinet@basilisk.fr>**20191113144901
+ Ignore-this: 4a1bbd949b87b9a9f7e83940ec457347
+] 
+hash: 0000000813-68a6683facd2250cb4004a86ecda035719ec8d7acac129a3724aa384517b8267
+[Added isoline for u = 0
+Stephane Popinet <popinet@basilisk.fr>**20191113144936
+ Ignore-this: f782ec232f7f1d8b9d659c0443877d62
+] 
+hash: 0000000212-934ba5373e5ff3aa981ac8450a01834f19f7132904ebad2eda3fd4dfc09dde34
+[Moved lookup_field() to utils.h
+Stephane Popinet <popinet@basilisk.fr>**20191113145150
+ Ignore-this: d1107ee17052433f500024d4da9272f2
+] 
+hash: 0000001173-45bf3ea35f8b4b791387795ee742f804a3737786e4335b34035d238a09a9c306
+[output_field() can take an optional "box" argument
+Stephane Popinet <popinet@basilisk.fr>**20191113145242
+ Ignore-this: 3eef30c73c3a5bceec8190a53dbe8034
+] 
+hash: 0000001830-f0de7f520596027754c9935929f50ffe936adb288cf032644a789aa300173649
+[Old non-hydro version using qz rather than w
+Stephane Popinet <popinet@basilisk.fr>**20191113155724
+ Ignore-this: 1131ddcaffb6f81139d3340ce6caa6e2
+] 
+hash: 0000003289-4f3a805382fac54a5e7c1719bd7de0413e8c6cc9845a22ccb788e6040604d3f8
+[Another backup version
+Stephane Popinet <popinet@basilisk.fr>**20191113155944
+ Ignore-this: 1da344fd80180e2c4d9dca163bd591d5
+] 
+hash: 0000000671-2afe06da025d1b35a71c61fe852b56a266d65a81b1097ac12298ea0132a80c2e
+[Cleaned up old layered versions
+Stephane Popinet <popinet@basilisk.fr>**20191113160127
+ Ignore-this: c410362bff55754fcd25cb49548ca625
+] 
+hash: 0000021970-547ba7f16d35f8672231e1dcfbb8e3d2b000fd2201e6cb5c60ed102f4b389f47
+[Vertical layered diffusion uses a third-order top boundary condition
+Stephane Popinet <popinet@basilisk.fr>**20191113160227
+ Ignore-this: a8f76c8c45b1685b9d886f5156bc3326
+] 
+hash: 0000005155-2396ccc8d3d62659b828ed631300d5a4a78811294802731129558c16006e7683
+[The old vertically-staggered non-hydrostatic solver.
+Stephane Popinet <popinet@basilisk.fr>**20191113160717
+ Ignore-this: 5b294dcacb42ed9a85e8ef6fa3021f06
+] 
+hash: 0000018395-8fb6f224a2c84d280ec6db305cf009113c87154c0b3a40d4159613a9e47f3cf6
+[Documentation for the non-hydrostatic layered solver
+Stephane Popinet <popinet@basilisk.fr>**20191114113443
+ Ignore-this: dbe5e40dac223a84ff4bf26d7d7c1018
+] 
+hash: 0001206693-c3b579487c4cdf8b5e0d9a7d7171c721ad7a7afe8ecd76a700c937b939a89930
+[PPR module
+Stephane Popinet <popinet@basilisk.fr>**20191114165225
+ Ignore-this: afbb4521fba7815c3d6203d9c2992b28
+] 
+hash: 0000202160-aaf75b35b2861f507fec26e4e3586f1331c3ffb34da3f30ac20817a6a9c34618
+[Documentation for vertical remapping
+Stephane Popinet <popinet@basilisk.fr>**20191114165233
+ Ignore-this: 181055fb2684fb35146209eb29b6838e
+] 
+hash: 0000002611-ed0000f9fed65060335e985a65a97ff06a9ec1329934d1c7be36de34addb218e
+[Fixed typo in Tohoku example
+Stephane Popinet <popinet@basilisk.fr>**20191114172514
+ Ignore-this: 1df7fd4ba888e75a99122a3059ab968
+] 
+hash: 0000000235-270f33f5ffe7e6929b8ce2ed3c28fd02ebe32a6d00dc46422f9b11ec60651432
+[Added multilayer-tests to default tests
+Stephane Popinet <popinet@basilisk.fr>**20191114174644
+ Ignore-this: 25751674117111ac6924ae7e10e52bfe
+] 
+hash: 0000000240-233cd981e619f2c98cb2abd008bfac3cdfdb61a827d46d640dcf65db5ca0ed5d
+[New target 'pdf-plots' to use PDF rather than SVG for default plots
+Stephane Popinet <popinet@basilisk.fr>**20191011131355
+ Ignore-this: efbe6dd45680878a2ae41ab4e364c9bc
+] 
+hash: 0000001823-166f0033c42ba5123de2d5093c8f8664ac1e589fb176adf695616303889b677c
+[gnuplot needs to use macros for terminals for some reason
+Stephane Popinet <popinet@basilisk.fr>**20191115081929
+ Ignore-this: 27c8229f9da465d9686ecfec44ec7342
+] 
+hash: 0000000475-888cb8c0e641e705d62eb619280d00d5cd09ba79bf984f4f2d3c03c8cf19068f
+[Fixed pdf-plots target
+Stephane Popinet <popinet@basilisk.fr>**20191115085633
+ Ignore-this: ecdcef5b911e37191e45bf87a78d8b03
+] 
+hash: 0000000420-a3e9e734570bfe93b285353927a43aac362fbeb22e6b6667ef492cd98a48b4f0
+[Vertical velocity profiles and Maxima script
+Stephane Popinet <popinet@basilisk.fr>**20191113114045
+ Ignore-this: 165b2b79f13e8531317aba2181f8bb18
+] 
+hash: 0000013224-c3a03a6866750cb03c69a4f36d338d2d2bdb625744ed4b8acaf54c649ab9a4ce
+[Fixed movie generation for the breaking Stokes wave test
+Stephane Popinet <popinet@basilisk.fr>**20191115091427
+ Ignore-this: 4da0bf4d8d6c8359f54586652c190c37
+] 
+hash: 0000000307-ce550b7bd75972350924e7fc9ff75bf7a0871a8887a5d1f0ff076047c9b0e923
+[Cosmetics
+Stephane Popinet <popinet@basilisk.fr>**20191115093523
+ Ignore-this: b6695bf470804c71190541fac8d03273
+] 
+hash: 0000000538-077b03dfb216939afdcc9e57b410ab7a589bf2f4dbb826ab4bde29fecb72bec7
+[Removed link-time-optimisation for portability of the PPR library
+Stephane Popinet <popinet@basilisk.fr>**20191115093814
+ Ignore-this: 19521ee900973c1be5cabd6a752a3792
+] 
+hash: 0000000266-c9609dc486192ff8f387858416d6e052619077d12e574d358c11b2839016f272
+[Updated test case references for surface tension fix
+Stephane Popinet <popinet@basilisk.fr>**20191115151701
+ Ignore-this: 595d013d6cb2844943c8e967cd1b7bf6
+] 
+hash: 0000032662-d78320b4281bbc3c5d895e8bc738edc0f12994ae6953a810ad9e14d91bd7aa58
+[Fixed assertions and -nolineno qcc option
+Stephane Popinet <popinet@basilisk.fr>**20191115154554
+ Ignore-this: 9eb9302f7810abab54236c004d2f6579
+] 
+hash: 0000000429-39b73aa824613b690364163e58a79fef88ffa23597321f69c85c98ba0c51572c
+[Further fix for qcc and assertions
+Stephane Popinet <popinet@basilisk.fr>**20191115174812
+ Ignore-this: 2b91f715ce91e1b509fec6d438a415f5
+] 
+hash: 0000000528-053fa7a05c37fc42baa0ebd287c4307ceb984fc3a8af31ff1e62f9f6a1b9801d
+[TAG release 19-11-16
+Stephane Popinet <popinet@basilisk.fr>**20191116083158
+ Ignore-this: 85dd9f63c534eb1c9b04756accfdae31
+] 
+hash: 0000015979-ec40a04e545a49137cfec546bef6ff87e7ce552c1e16a82518d7632559e4e142
+[Added suport for "range queries" for videos
+Stephane Popinet <popinet@basilisk.fr>**20191116133305
+ Ignore-this: ffbab30585cb4d96a42103e46d46cc86
+] 
+hash: 0000001409-fb27e30b2e40ce4ab51f69275ecdcd3bed554829d4e5e824e889ad12c497fefc
+[Added ffmpeg options to make safari happy
+Stephane Popinet <popinet@basilisk.fr>**20191116151024
+ Ignore-this: 30a597b7b3a3423d74b81572bd6d180e
+] 
+hash: 0000000474-29acc424da2e945ca50f9dc7aeb00b5c8092398e27da9ddbe97d5fb58881ffa2
+[ppm2mp4 generates higher-quality movies
+Stephane Popinet <popinet@basilisk.fr>**20191120080146
+ Ignore-this: 3afd48748f7847a311596462e9f5e437
+] 
+hash: 0000000308-99bc1086fb4aa33104ac4e541f03bb2dcbe98ac9ab05e9308f827d26ade731e1
+[New 3D multilayer breaking Stokes wave
+Stephane Popinet <popinet@basilisk.fr>**20191120080617
+ Ignore-this: c5f002b4e35161c4b12a21ff3d47f05d
+] 
+hash: 0000005572-667684b3593830ae389ffff785587d0a5e9b3ab7c385f2a7bcd21fd669d90de7
+[2D viscous terms now work for the multilayer solver
+Stephane Popinet <popinet@basilisk.fr>**20191120081622
+ Ignore-this: acc6a0fb281adb389c4bdf5ccdcb433a
+] 
+hash: 0000000584-ef3e757a16bc6f6ebf00b71c004d38bac11d35c3a682c7ab47d4b25e6521f0ca
+[Bibtex references are sorted by date rather than author
+Stephane Popinet <popinet@basilisk.fr>**20191120154246
+ Ignore-this: b18f539a09a5ff8df8085e4d3287cdbb
+] 
+hash: 0000000399-54e2594ee5de740d97280fb3188ddeb99cc9d1c6ef73527c50baae6abade540a

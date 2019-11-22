@@ -6,7 +6,9 @@
 @include <string.h>
 @include <float.h>
 @include <limits.h>
-@include <assert.h>
+@ifndef assert
+@ include <assert.h>
+@endif
 @include <math.h>
 @include <time.h>
 @include <sys/time.h>
@@ -973,6 +975,17 @@ scalar * list_append (scalar * list, scalar s)
   int len = list_len (list);
   qrealloc (list, len + 2, scalar);
   list[len] = s;
+  list[len + 1].i = -1;
+  return list;
+}
+
+scalar * list_prepend (scalar * list, scalar s)
+{
+  int len = list_len (list);
+  qrealloc (list, len + 2, scalar);
+  for (int i = len; i >= 1; i--)
+    list[i] = list[i-1];
+  list[0] = s;
   list[len + 1].i = -1;
   return list;
 }
