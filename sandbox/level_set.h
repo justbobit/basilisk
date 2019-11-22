@@ -38,16 +38,16 @@ associated velocity field, they do not take into account the embedded boundaries
 
 
 void tracer_fluxes_LS (scalar f,
-        face vector uf,
-        face vector flux,
-        double dt,
-        (const) scalar src)
+  face vector uf,
+  face vector flux,
+  double dt,
+  (const) scalar src)
 {
 
   /**
   We first compute the cell-centered gradient of *f* in a locally-allocated
   vector field. */
-  
+
   vector g[];
   gradients ({f}, {g});
 
@@ -69,11 +69,11 @@ void tracer_fluxes_LS (scalar f,
     /**
     and tangential components... */
 
-  
+
     double vn = (uf.y[i] + uf.y[i,1])/2.;
     double fyy = vn < 0. ? f[i,1] - f[i] : f[i] - f[i,-1];
     f2 -= dt*vn*fyy/(2.*Delta);
-   
+
 
     flux.x[] = f2*uf.x[];
   }
@@ -95,7 +95,7 @@ void advection_LS (struct Advection p) //never takes into account the solid
 
   /**
   If *src* is not provided we set all the source terms to zero. */
-  
+
   scalar * lsrc = p.src;
   if (!lsrc) {
     const scalar zero[] = 0.;
@@ -108,15 +108,15 @@ void advection_LS (struct Advection p) //never takes into account the solid
   for (f,src in p.tracers,lsrc) {
     face vector flux[];
     tracer_fluxes_LS (f, p.u, flux, p.dt, src);
-    foreach()
-      foreach_dimension()
-        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); // careful we have removed
-        // cm[]
+    foreach(){
+      foreach_dimension(){
+        f[] += p.dt*(flux.x[] - flux.x[1])/(Delta); 
+      }
+    }
   }
   boundary (p.tracers);
 
-  if (!p.src)
-    free (lsrc);
+  if (!p.src)free (lsrc);
 }
 
 /**
@@ -163,8 +163,9 @@ $$
 #if Gibbs_Thomson
 
   foreach(){
-    T_eq[] = (epsK*curve[] // here we suppose that Tm = 0
-             -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y);
+    // here we suppose that Tm = 0
+    T_eq[] = (epsK*curve[] 
+      -epsV*sqrt(v_pc.x[]*v_pc.x[]+v_pc.y[]*v_pc.y[]))*fac1(x,y);
   }
 
 #else
@@ -211,16 +212,16 @@ $$
 
   boundary((scalar*){gtr});
   foreach(){
-      cs[]      = 1.-cs[];
+    cs[]      = 1.-cs[];
   }
   foreach_face()
-    fs.x[]      = 1.-fs.x[];
+  fs.x[]      = 1.-fs.x[];
 
   boundary({cs,fs});
   restriction({cs,fs});
 
   boundary({tr2});
-  
+
   foreach(){
     foreach_dimension(){
       gtr2.x[] = 0.;
@@ -246,21 +247,21 @@ $$
     }
   }
   boundary((scalar*){gtr2});
-  
+
   foreach(){
-      cs[]      = 1.-cs[];
+    cs[]      = 1.-cs[];
   }
   foreach_face()
-    fs.x[]      = 1.-fs.x[];
+  fs.x[]      = 1.-fs.x[];
   boundary({cs,fs});
   restriction({cs,fs});
 
   /**
   With the the normal vector and the gradients of the tracers we can now 
   compute the phase change velocity $\mathbf{v}_{pc}$. */
-  
+
   foreach_face()
-    v_pc.x[]  = 0.;
+  v_pc.x[]  = 0.;
 
   foreach_face(){
     if(interfacial(point, cs)){
@@ -279,100 +280,132 @@ Reinitialization method can be chosen by overloading this function */
 event LS_reinitialization(i++,last) {
 }
 
- double dirichlet_embed_LS(Point point, scalar cs, face vector fs, 
-    face vector v_pc){
+double dirichlet_embed_LS(Point point, scalar cs, face vector fs, 
+  face vector v_pc){
 
   coord n = facet_normal (point, cs, fs);
   normalize(&n);
   double a = 0;
   foreach_dimension()
-    a += n.x*v_pc.x[];
+  a += n.x*v_pc.x[];
   return a;
 }
 
 /**
 # Reinitialization of the level-set function
 
-V2 of the reinit function with subcell correction.
-Based on the work of Russo2000. We want to iterate on this equation :
+Redistancing function with subcell correction, see the work of [Russo et al.,
+1999](#russo_remark_2000). 
+
+Let $\phi$ be a function close to a signed function that has been perturbed by
+numerical diffusion. By iterating on this equation :
 $$
 \dfrac{\partial \phi}{\partial t} = sign(\phi^{0}) \left(1- \nabla \phi\right)
 $$
-which can be discretized into :
-$$\phi^{n+1} = \phi^n - \Delta t S(\phi) G(\phi)$$
-far from the interface. Near the interface it is modified to :
-$$\phi^{n+1} = \phi^n - \frac{\Delta t}{\Delta x} ( sgn(\phi^0) |\phi^n| - 
-D_i)$$
+we can correct or redistance $\phi$ to make it a signed function.
+
+We discretize far from the interface into :
+$$\phi_i^{n+1} = \phi_i^n - \Delta t * sign(\phi_i^0) G(\phi)_i$$
+with:
+$$
+G(\phi_i) = \left\{ \begin{array}{ll}
+max ( |a_+|, |b_-|) &, if \phi_i^0 >0 \\
+max ( |a_-|, |b_+|) &, if \phi_i^0 <0 \\
+\end{array}
+\right.
+$$
+and:
+$$
+a= D_x^-\phi_i = (\phi_i -\phi_{i-1})/\Delta x\\
+b= D_x^+\phi_i = (\phi_{i+1}- \phi_{i})/\Delta x
+$$
+which is a classical upwind scheme.
+
+Near the interface, *i.e.* for cells where:
+$$
+\phi^0_i\phi^0_{i+1} \leq 0 \text{ or } \phi^0_i\phi^0_{i-1} \leq 0
+$$
+it is modified to :
+$$\phi_i^{n+1} = \phi_i^n - \frac{\Delta t}{\Delta x} ( sign(\phi_i^0)
+|\phi_i^n| - D_i)$$
 
 with:
-$$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_0^i}$$
+$$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_i^0}$$
 
 and:  
 $$\Delta \phi_0^i = \max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
 \phi^0_{i}-\phi^0_{i+1})$$  
   
-
-Based on the work of Russo (2000)
  */
 void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   vector gr_LS[];
   int i ;
   double eps = dt/100., eps2 = eps/2.;
-  scalar dist0[], d2[], dist_eps[];
+
+/**
+We create `dist0[]` which will be a copy of the initial level-set function
+before the iterations and `dist_n[]` which will be $\phi^{n}$ used for the
+iterations.
+*/
+  scalar dist0[], dist_n[];
   foreach(){
     dist0[] = dist[] ;
-    foreach_dimension(){
-      d2[] = min(fabs(dist[]),min(fabs(dist[-1,0]),fabs(dist[1,0])));
-    }
-    d2[] = min(d2[], min(fabs(dist[1,1]),dist[-1,-1]));
   }
   boundary({dist0});
 
+
+/**
+Iteration loop
+*/
   for (i = 1; i<=it_max ; i++){
     double res=0.;
     foreach(){
-      dist_eps[] = dist[] ;
+      dist_n[] = dist[] ;
     }
-    boundary({dist_eps});
-    
+    boundary({dist_n});
+
+
+/**
+First step, calculate $\Delta t$ which depends on the local position of the
+0-level set. This time step is only used for the cells near the interface, we
+tag them using `min_neighb` ($<0$ for interfacial cells).
+*/
     double xCFL = 1.;
-// 1) we make a copy of dist before iterating on it
-// 2) we determine xCFL according to the local size
-    int sum = 0;
-    foreach(reduction(min:xCFL) reduction(+:sum)){
-        sum ++;
-        //min_neighb : variable for detection if cell is near
-        //             the zero of the level set function
+    foreach(reduction(min:xCFL)){
+      double min_neighb = 1.;
+      foreach_dimension(){
+        min_neighb = min (min_neighb, dist_n[-1,0]*dist_n[]); 
+        min_neighb = min (min_neighb, dist_n[ 1,0]*dist_n[]);
+      }
 
-        double min_neighb = 1.;
+/**
+Then we calculate the CFL for interfacial cells :
+
+CFL  = \text{min}(Delta x * \phi^0_i)/\Delta \phi_i
+*/
+      if(min_neighb < 0.){
+        double dist1= 0., dist2= 0.,dist3= 0.;
         foreach_dimension(){
-          min_neighb = min (min_neighb, dist_eps[-1,0]*dist_eps[]); 
-          min_neighb = min (min_neighb, dist_eps[ 1,0]*dist_eps[]);
+          dist1 += pow((dist0[1,0]-dist0[-1,0])/2.,2.);
+          dist2 += pow((dist0[1,0]-dist0[    ]),2.);
+          dist3 += pow((dist0[   ]-dist0[-1,0]),2.);
         }
-
-        if(min_neighb < 0.){
-          double dist1= 0., dist2= 0.,dist3= 0.;
-          foreach_dimension(){
-            dist1 += pow((dist0[1,0]-dist0[-1,0])/2.,2.);
-            dist2 += pow((dist0[1,0]-dist0[    ]),2.);
-            dist3 += pow((dist0[   ]-dist0[-1,0]),2.);
-          }
-          double Dij = Delta*dist0[]/
-                  max(eps2,sqrt(max(dist1,max(dist2,dist3))));
-  // stability condition near the interface is modified
-          xCFL = min(xCFL,fabs(Dij)/(Delta));
-        }
+        double Dij = Delta*dist0[]/
+        max(eps2,sqrt(max(dist1,max(dist2,dist3))));
+        // stability condition near the interface is modified
+        xCFL = min(xCFL,fabs(Dij)/(Delta));
+      }
     }
     foreach(reduction(max:res)){
-      if(d2[]< NB){
-      double delt =0.;
+      if(dist0[]< NB){
+        double delt =0.;
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
 
         double min_neighb = 1.;
         foreach_dimension(){
-          min_neighb = min (min_neighb, dist_eps[-1,0]*dist_eps[]);
-          min_neighb = min (min_neighb, dist_eps[ 1,0]*dist_eps[]);
+          min_neighb = min (min_neighb, dist_n[-1,0]*dist_n[]);
+          min_neighb = min (min_neighb, dist_n[ 1,0]*dist_n[]);
         }
 
         if(min_neighb < 0.){
@@ -383,25 +416,26 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
             dist3 += pow((dist0[   ]-dist0[-1,0]),2.);
           }
           double Dij = Delta*dist0[]/
-                  max(eps2,sqrt(max(dist1,max(dist2,dist3))));
-          delt = (sign2(dist0[])*fabs(dist_eps[])-Dij)/Delta;
+          max(eps2,sqrt(max(dist1,max(dist2,dist3))));
+          delt = (sign2(dist0[])*fabs(dist_n[])-Dij)/Delta;
         }
-        else 
+        else{ 
           if(dist0[]>0){
-          foreach_dimension(){
-            double a = max(0.,(dist_eps[]    - dist_eps[-1,0])/Delta);
-            double b = min(0.,(dist_eps[1,0] - dist_eps[]    )/Delta);
-            delt   += max(pow(a,2.),pow(b,2.));
+            foreach_dimension(){
+              double a = max(0.,(dist_n[]    - dist_n[-1,0])/Delta);
+              double b = min(0.,(dist_n[1,0] - dist_n[]    )/Delta);
+              delt   += max(pow(a,2.),pow(b,2.));
+            }
+            delt = sign2(dist0[])*(sqrt(delt) - 1.);
           }
-          delt = sign2(dist0[])*(sqrt(delt) - 1.);
-        }
-        else{
-          foreach_dimension(){
-            double a = min(0.,(dist_eps[]    - dist_eps[-1,0])/Delta);
-            double b = max(0.,(dist_eps[1,0] - dist_eps[]    )/Delta);
-            delt   += max(pow(a,2.),pow(b,2.));
-           }
-           delt = sign2(dist0[])*(sqrt(delt) - 1.);
+          else{
+            foreach_dimension(){
+              double a = min(0.,(dist_n[]    - dist_n[-1,0])/Delta);
+              double b = max(0.,(dist_n[1,0] - dist_n[]    )/Delta);
+              delt   += max(pow(a,2.),pow(b,2.));
+            }
+            delt = sign2(dist0[])*(sqrt(delt) - 1.);
+          }
         }
         if(fabs(dist0[])>0.3*NB){
           dist[] -= 0.5*dt*delt;
@@ -410,12 +444,16 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
           dist[] -= xCFL*dt*delt;
         }
         if(fabs(delt)>=res) res = fabs(delt);
-        }
+      }
     }
-    
+
     boundary({dist});
     restriction({dist});
 
+
+/**
+Iterations are stopped when $max(|\phi_i^{n+1}-\phi_i^n| < eps$
+*/
     if(res<eps){
       break;
     }
@@ -431,7 +469,7 @@ void LS_reinit2(scalar dist, double dt, double NB, int it_max){
 # Reconstruction of a velocity off an interface
 */  
 void recons_speed(scalar dist, double dt, int nb_cell_NB,
-                  double NB, scalar * LS_speed){
+  double NB, scalar * LS_speed){
 /**
 The phase change field is only defined in interfacial cells, it must now be
 reconstructed on the cells in the direct vicinity. We use here the method
@@ -451,14 +489,14 @@ using a centered approximation
 */
 
   vector n_dist[], grad_dist[];
- 
+
   foreach(){
 
     double sum=1e-15;
     foreach_dimension(){
       // grad_dist.x[] = (dist[]-dist[-1,0])/(2.*Delta),
       grad_dist.x[] = min(dist[1,0]-dist[],
-            min(dist[]-dist[-1,0],(dist[1,0]-dist[-1,0])/2))/Delta;
+        min(dist[]-dist[-1,0],(dist[1,0]-dist[-1,0])/2))/Delta;
       sum += grad_dist.x[]*grad_dist.x[];
 
     }
@@ -488,7 +526,7 @@ surface along the normal to the surface.
           foreach_dimension(){
             if(cs[] ==0. || cs[] == 1.){
               f[] -= dt *(max(n_dist.x[],0.)*(f2[   ]-f2[-1,0])/Delta
-                         +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
+               +min(n_dist.x[],0.)*(f2[1,0]-f2[    ])/Delta);
             }
           }
         }
@@ -503,6 +541,16 @@ surface along the normal to the surface.
 ## References
 
 ~~~bib
+
+@article{russo_remark_2000,
+  title = {A remark on computing distance functions},
+  volume = {163},
+  number = {1},
+  journal = {Journal of Computational Physics},
+  author = {Russo, Giovanni and Smereka, Peter},
+  year = {2000},
+  pages = {51--67}
+}
 
 @article{peng_pde-based_1999,
   title = {A {PDE}-Based Fast Local Level Set Method},
