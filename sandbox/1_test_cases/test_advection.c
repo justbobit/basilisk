@@ -13,7 +13,6 @@ scheme and the reinitialization function of the LS function. */
 #include "basic_geom.h"
 
 
-#define T 2*10*(1 << 8)
 
 
 /**
@@ -34,10 +33,10 @@ meaning that the level set function has meaning only in the direct vicinity of
 the 0 value of the level set function. For this test case, the NB is made of 
 only 4 cells. 
  */
-
 int     MAXLEVEL = 8;
 int     nb_cell_NB =  8 ;  // number of cells for the NB
 double  NB_width ;              // length of the NB
+#define T  2*10*(1 << 8)
 
                                 // will display the results
 double mass_ls_init, mass_vof_init;
@@ -53,9 +52,9 @@ int main() {
 
   periodic(right);
   periodic(top);
-    NB_width = L0*nb_cell_NB / (1<<MAXLEVEL);
-    init_grid (1 << MAXLEVEL);
-    run();
+  NB_width = L0*nb_cell_NB / (1<<MAXLEVEL);
+  init_grid (1 << MAXLEVEL);
+  run();
 }
 
 
@@ -124,7 +123,7 @@ event logfile (t = {0,T}) {
     mass_ls_init = s.sum;
   }
   if (N == (1<<MAXLEVEL))
-  output_facets (f);
+    output_facets (f);
 }
 
 /**
@@ -139,7 +138,7 @@ Note that the error of the level set function is only studied in half of the NB 
 event field (t = T) {
   scalar e[], e2[];
   fraction (e, circle(x,y,center_circle,Radius));
-  foreach_vertex()
+  foreach()
     e2[] = -circle(x,y,center_circle,Radius);
   foreach(){
     e[]  -= f[];
@@ -148,15 +147,15 @@ event field (t = T) {
   norm n  = normf (e);
   norm n2 = normf (e2);
   fprintf (stderr, "%d %g %g %g %g %g %g\n", N, n.avg, n.rms, n.max, 
-            n2.avg, n2.rms, n2.max);
+    n2.avg, n2.rms, n2.max);
   scalar l[];
-    foreach()
-      l[] = dist[];
-    output_ppm (l, file = "dist_final.png", n = 400,min = -NB_width,
-      max = NB_width);
-    foreach()
-      l[] = f[];
-    output_ppm (l, file = "f_reversed.png", n = 400, min = 0, max = 1);
+  foreach()
+    l[] = dist[];
+  output_ppm (l, file = "dist_final.png", n = 400,min = -NB_width,
+    max = NB_width);
+  foreach()
+    l[] = f[];
+  output_ppm (l, file = "f_reversed.png", n = 400, min = 0, max = 1);
 }
 
 /**
