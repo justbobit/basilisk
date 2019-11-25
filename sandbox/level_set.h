@@ -325,7 +325,9 @@ Near the interface, *i.e.* for cells where:
 $$
 \phi^0_i\phi^0_{i+1} \leq 0 \text{ or } \phi^0_i\phi^0_{i-1} \leq 0
 $$
-it is modified to :
+the scheme must stay truly upwind, meaning that the movement 0 level-set of the
+function must be as small as possible. Therefore the upwind numerical scheme is
+modified to :
 $$\phi_i^{n+1} = \phi_i^n - \frac{\Delta t}{\Delta x} ( sign(\phi_i^0)
 |\phi_i^n| - D_i)$$
 
@@ -335,7 +337,7 @@ $$D_i = \Delta x * \frac{\phi_i^0}{\Delta \phi_i^0}$$
 and:  
 $$\Delta \phi_0^i = \max((\phi^0_{i-1}-\phi^0_{i+1})/2,\phi^0_{i-1}-\phi^0_{i},
 \phi^0_{i}-\phi^0_{i+1})$$  
-  
+
  */
 void LS_reinit2(scalar dist, double dt, double NB, int it_max){
   vector gr_LS[];
@@ -398,6 +400,9 @@ CFL  = \text{min}(Delta x * \phi^0_i)/\Delta \phi_i
     }
     foreach(reduction(max:res)){
       if(dist0[]< NB){
+/**
+We only iterate in the narrow band
+*/
         double delt =0.;
         //min_neighb : variable for detection if cell is near
         //             the zero of the level set function
@@ -408,7 +413,7 @@ CFL  = \text{min}(Delta x * \phi^0_i)/\Delta \phi_i
           min_neighb = min (min_neighb, dist_n[ 1,0]*dist_n[]);
         }
 
-        if(min_neighb < 0.){
+        if(min_neighb < 0.){ // the cell contains the interface
           double dist1= 0., dist2= 0.,dist3= 0.;
           foreach_dimension(){
             dist1 += pow((dist0[1,0]-dist0[-1,0])/2.,2.);
@@ -420,7 +425,7 @@ CFL  = \text{min}(Delta x * \phi^0_i)/\Delta \phi_i
           delt = (sign2(dist0[])*fabs(dist_n[])-Dij)/Delta;
         }
         else{ 
-          if(dist0[]>0){
+          if(dist0[]>0){ // no interface in the cell
             foreach_dimension(){
               double a = max(0.,(dist_n[]    - dist_n[-1,0])/Delta);
               double b = min(0.,(dist_n[1,0] - dist_n[]    )/Delta);
