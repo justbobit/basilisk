@@ -222,9 +222,13 @@ $$
 
   boundary({tr2});
 
+  vector p_sauv[], n_sauv[];
+
   foreach(){
     foreach_dimension(){
       gtr2.x[] = 0.;
+      p_sauv.x[] = nodata;
+      n_sauv.x[] = nodata;
     }
     if(fabs(dist[])< NB_width){
       if(interfacial(point, cs)){
@@ -232,6 +236,10 @@ $$
         normalize(&n);
         double alpha  = plane_alpha (cs[], n);
         line_length_center (n, alpha, &p);
+        foreach_dimension(){
+          p_sauv.x[] = p.x;
+          n_sauv.x[] = n.x;
+        }
         double c=0.;
         double temp = T_eq[];
         // foreach_dimension(){
@@ -269,6 +277,28 @@ $$
     }
   }
   boundary((scalar *){v_pc});
+
+
+
+/**
+We have calculated a speed that is exact only on the interface. We make a simple
+intepolation correction to obtain a cell-centered velocity field.
+*/
+  foreach(){
+    if(fabs(dist[])< NB_width){
+      if(interfacial(point, cs)){
+        double norm=0;
+        foreach_dimension(){
+          norm += pow(n_sauv.x[]*p_sauv.x[]*Delta,2.);
+        }
+        norm = sqrt(norm);
+        foreach_dimension(){
+          v_pc.x[] = sign2(v_pc.x[])*
+                    fabs(n_sauv.x[]*p_sauv.x[]*Delta)/norm*fabs(v_pc.x[]);
+        }
+      }
+    }
+  }
 }
 
 
