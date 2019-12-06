@@ -268,8 +268,9 @@ $$
   With the the normal vector and the gradients of the tracers we can now 
   compute the phase change velocity $\mathbf{v}_{pc}$. */
 
-  foreach_face()
-  v_pc.x[]  = 0.;
+  foreach_face(){
+    v_pc.x[]  = 0.; 
+  }
 
   foreach_face(){
     if(interfacial(point, cs)){
@@ -277,28 +278,6 @@ $$
     }
   }
   boundary((scalar *){v_pc});
-
-
-
-/**
-We have calculated a speed that is exact only on the interface. We make a simple
-intepolation correction to obtain a cell-centered velocity field.
-*/
-  foreach(){
-    if(fabs(dist[])< NB_width){
-      if(interfacial(point, cs)){
-        double norm=0;
-        foreach_dimension(){
-          norm += pow(n_sauv.x[]*p_sauv.x[]*Delta,2.);
-        }
-        norm = sqrt(norm);
-        foreach_dimension(){
-          v_pc.x[] = sign2(v_pc.x[])*
-                    fabs(n_sauv.x[]*p_sauv.x[]*Delta)/norm*fabs(v_pc.x[]);
-        }
-      }
-    }
-  }
 }
 
 
@@ -541,14 +520,24 @@ using a centered approximation
   }
   boundary((scalar *) {n_dist});
 
+
 /**
 Second part do the advection a few times to extend the velocity from the 
 surface along the normal to the surface. 
 */ 
 
   int ii;
-  for (ii=1; ii<=10*nb_cell_NB; ii++){
-    for (scalar f in LS_speed){
+  scalar delt_err[];
+      
+  for (scalar f in LS_speed){
+    fprintf(stderr, "COMPOSANTE\n" );
+    scalar f_i[];
+
+    foreach()
+      f_i[] = f[];
+    boundary({f_i});
+
+    for (ii=1; ii<=10*nb_cell_NB; ii++){
       scalar f2[];
       foreach(){
         f2[] = f[];
@@ -568,7 +557,39 @@ surface along the normal to the surface.
       }
       boundary({f});
       restriction({f});
+
+      foreach()
+        delt_err[] = nodata;
+
+      foreach(){
+        if(interfacial(point, cs)){
+          coord n       = facet_normal( point, cs ,fs) , p;
+          normalize(&n);
+          double alpha  = plane_alpha (cs[], n);
+          line_length_center (n, alpha, &p);
+          
+          int Stencil[2];
+          InterpStencil(p, Stencil);
+
+          coord p_interp = {x+p.x*Delta, y + p.y*Delta};
+
+          double f_temp = mybilin(point, f, Stencil, p_interp);
+          // double f_temp = bilinear_noembed(point,f);
+          double error  = f_i[] - f_temp;
+          delt_err[] = error;
+          if(ii>(5*nb_cell_NB) && ii%(2*nb_cell_NB) == nb_cell_NB-1){
+            correct_values(point, f, Stencil, error);
+          }
+        }
+      }
+
+      boundary({f});
+      restriction({f});
     }
+
+    stats s2  = statsf(delt_err);
+    fprintf(stderr, "%g %g %g\n", s2.min, s2.max, s2.stddev);
+
   }
 }
 

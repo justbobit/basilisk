@@ -60,7 +60,7 @@ FILE * fp1;
 #define T_eq         0.
 
 
-#define plane(x, y, n) (y - 0.5 - 0.2*sin(2.*n*Pi*x))
+#define plane(x, y, n) (y - 0.5 - 0.1*sin(2.*n*Pi*x))
 // #define plane(x, y, H) (y - H)
 
 
@@ -234,14 +234,13 @@ event LS_advection(i++,last){
     phase_change_velocity_LS_embed (cs, fs ,TL, TS, v_pc, dist, L_H, 1.05*NB_width,
       nb_cell_NB,lambda,epsK, epsV);
 
+    recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
     view (fov = 9.58686, quat = {0,0,0,1}, tx = -0.500645, ty = -0.479972, 
       bg = {1,1,1}, width = 1438, height = 698, samples = 1);
     box();
     draw_vof("cs");
     squares("v_pc.y");    
     save ("v_pcy.mp4");
-
-    recons_speed(dist, 0.5*DT, nb_cell_NB, NB_width, LS_speed);
 
 
     dt = timestep_LS (v_pc, DT);
@@ -346,7 +345,7 @@ event movies ( i++,last;t<2.)
 }
 /**
 ~~~gnuplot Evolution of the interface
-set term pngcairo size 1000,1000 enhanced font 'Helvetica ,50'
+set term pngcairo size 1400,1000 enhanced font 'Helvetica ,50'
 set key top right
 set output 'interfaces_sine.png'
 unset xlabel
@@ -355,6 +354,7 @@ unset ytics
 unset border
 unset margin
 unset ylabel
+set yrange [0.4:0.6]
 plot 'out' w l lw 4 t 'Interface'
 ~~~
 */

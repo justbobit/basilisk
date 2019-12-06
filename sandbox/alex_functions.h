@@ -36,8 +36,74 @@ double sign2 (double x)
   return(x > 0. ? 1. : x<0 ? -1. : 0.);
 }
 
+void InterpStencil (coord p, int Stencil[]){
+  if(p.x<0){
+    Stencil[0] = -1;
+  } 
+  else{
+    Stencil[0] = 1;
+  } 
+
+  if(p.y<0) {Stencil[1] = -1;}
+  else {Stencil[1] = 1;}
+}
+
 
 double capteur(Point point, scalar s){
   return s[];
 }
+
+double linearInterpolation(double x1, double f_x1, double x2, double f_x2, double x)
+{
+  double result = (x - x1)/(x2-x1)*f_x2  + (x2-x)/(x2-x1)*f_x1;
+  return result;
+}
+
+
+double mybilin (Point point, scalar s, int Stencil[], coord p_interp){
+  #if dimension == 2
+
+      double x1 = x + Stencil[0]*Delta;
+      double x2 = x + (Stencil[0]+1)*Delta;  
+      double y1 = y + Stencil[1]*Delta;
+      double y2 = y + (Stencil[1]+1)*Delta;
+
+      double f11 = s[Stencil[0],Stencil[1]];
+      double f21 = s[Stencil[0]+1,Stencil[1]];
+      double f12 = s[Stencil[0],Stencil[1]+1];
+      double f22 = s[Stencil[0]+1,Stencil[1]+1];
+
+      double R1 =  linearInterpolation(x1, f11, x2, f21, p_interp.x);
+      double R2 =  linearInterpolation(x1, f12, x2, f22, p_interp.x);
+      double  P =  linearInterpolation(y1,  R1, y2,  R2, p_interp.y);
+      return P;
+  #endif
+
+}
+
+void correct_values(Point point, scalar f, int Stencil[], double error){
+  f[Stencil[0]  ,Stencil[1]  ] = f[Stencil[0]  ,Stencil[1]  ] - error/4.;
+  f[Stencil[0]+1,Stencil[1]  ] = f[Stencil[0]+1,Stencil[1]  ] - error/4.;
+  f[Stencil[0]  ,Stencil[1]+1] = f[Stencil[0]  ,Stencil[1]+1] - error/4.;
+  f[Stencil[0]+1,Stencil[1]+1] = f[Stencil[0]+1,Stencil[1]+1] - error/4.;
+}
+
+static inline double bilinear_noembed (Point point, scalar s)
+{
+  #if dimension == 1
+    return (3.*coarse(s) + coarse(s,child.x))/4.;
+  #elif dimension == 2
+    return (9.*coarse(s) + 
+      3.*(coarse(s,child.x) + coarse(s,0,child.y)) + 
+      coarse(s,child.x,child.y))/16.;
+  #else // dimension == 3
+    return (27.*coarse(s) + 
+      9.*(coarse(s,child.x) + coarse(s,0,child.y) +
+    coarse(s,0,0,child.z)) + 
+      3.*(coarse(s,child.x,child.y) + coarse(s,child.x,0,child.z) +
+    coarse(s,0,child.y,child.z)) + 
+      coarse(s,child.x,child.y,child.z))/64.;
+  #endif
+}
+
 
