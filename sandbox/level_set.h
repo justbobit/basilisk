@@ -530,14 +530,14 @@ surface along the normal to the surface.
   scalar delt_err[];
       
   for (scalar f in LS_speed){
-    fprintf(stderr, "COMPOSANTE\n" );
     scalar f_i[];
 
     foreach()
       f_i[] = f[];
     boundary({f_i});
+    stats s2;
 
-    for (ii=1; ii<=10*nb_cell_NB; ii++){
+    for (ii=1; ii<=55*nb_cell_NB; ii++){
       scalar f2[];
       foreach(){
         f2[] = f[];
@@ -574,21 +574,30 @@ surface along the normal to the surface.
           coord p_interp = {x+p.x*Delta, y + p.y*Delta};
 
           double f_temp = mybilin(point, f, Stencil, p_interp);
-          // double f_temp = bilinear_noembed(point,f);
           double error  = f_i[] - f_temp;
-          delt_err[] = error;
-          if(ii>(5*nb_cell_NB) && ii%(2*nb_cell_NB) == nb_cell_NB-1){
-            correct_values(point, f, Stencil, error);
+          delt_err[] = error/f_i[];
+          if( ii%(5*nb_cell_NB) == (5*nb_cell_NB-1) ){
+            f[] += error/8.;
+             correct_values(point, f, Stencil, error);
+
+            double f_temp2 = mybilin(point, f, Stencil, p_interp);
+            if(abs(f_i[]-f_temp2) > abs(error)){
+              f[] -= error/8.;
+              correct_values(point, f, Stencil, -error);
+            }
+
+           // fprintf(stderr, "%g %g %g\n", f_temp2, f_temp, f_i[]);
           }
         }
       }
-
+      s2 = statsf(delt_err);
+      // fprintf(stderr, "#coeff inter%g %g %g\n", s2.min, s2.max, s2.stddev);
       boundary({f});
       restriction({f});
     }
 
-    stats s2  = statsf(delt_err);
-    fprintf(stderr, "%g %g %g\n", s2.min, s2.max, s2.stddev);
+
+    fprintf(stderr, "#######FINAL %g %g %g\n", s2.min, s2.max, s2.stddev);
 
   }
 }

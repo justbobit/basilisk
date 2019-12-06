@@ -59,7 +59,9 @@ double linearInterpolation(double x1, double f_x1, double x2, double f_x2, doubl
   return result;
 }
 
-
+/**
+Bilinear interpolation of a scalar s
+*/
 double mybilin (Point point, scalar s, int Stencil[], coord p_interp){
   #if dimension == 2
 
@@ -82,28 +84,8 @@ double mybilin (Point point, scalar s, int Stencil[], coord p_interp){
 }
 
 void correct_values(Point point, scalar f, int Stencil[], double error){
-  f[Stencil[0]  ,Stencil[1]  ] = f[Stencil[0]  ,Stencil[1]  ] - error/4.;
-  f[Stencil[0]+1,Stencil[1]  ] = f[Stencil[0]+1,Stencil[1]  ] - error/4.;
-  f[Stencil[0]  ,Stencil[1]+1] = f[Stencil[0]  ,Stencil[1]+1] - error/4.;
-  f[Stencil[0]+1,Stencil[1]+1] = f[Stencil[0]+1,Stencil[1]+1] - error/4.;
+  f[Stencil[0]  ,Stencil[1]  ] = f[Stencil[0]  ,Stencil[1]  ] + error/32.;
+  f[Stencil[0]+1,Stencil[1]  ] = f[Stencil[0]+1,Stencil[1]  ] + error/32.;
+  f[Stencil[0]  ,Stencil[1]+1] = f[Stencil[0]  ,Stencil[1]+1] + error/32.;
+  f[Stencil[0]+1,Stencil[1]+1] = f[Stencil[0]+1,Stencil[1]+1] + error/32.;
 }
-
-static inline double bilinear_noembed (Point point, scalar s)
-{
-  #if dimension == 1
-    return (3.*coarse(s) + coarse(s,child.x))/4.;
-  #elif dimension == 2
-    return (9.*coarse(s) + 
-      3.*(coarse(s,child.x) + coarse(s,0,child.y)) + 
-      coarse(s,child.x,child.y))/16.;
-  #else // dimension == 3
-    return (27.*coarse(s) + 
-      9.*(coarse(s,child.x) + coarse(s,0,child.y) +
-    coarse(s,0,0,child.z)) + 
-      3.*(coarse(s,child.x,child.y) + coarse(s,child.x,0,child.z) +
-    coarse(s,0,child.y,child.z)) + 
-      coarse(s,child.x,child.y,child.z))/64.;
-  #endif
-}
-
-
